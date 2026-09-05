@@ -18,7 +18,8 @@
     "build:app": "tauri build",
     "set-version": "node scripts/set-version.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "notes": "node scripts/release-notes.mjs"
+    "notes": "node scripts/release-notes.mjs",
+    "bindings": "node scripts/fetch-bindings.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
