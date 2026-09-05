@@ -1,6 +1,7 @@
 //! The modules MixDB is made of. One folder each, and one block of the list below each.
 
 pub mod db;
+pub mod mixengine;
 pub mod rest;
 pub mod terminal;
 pub mod tools;
