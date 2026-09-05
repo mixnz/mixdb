@@ -3,23 +3,41 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { DaemonStatus } from "../../api/types/DaemonStatus";
-import type { ServiceSummary } from "../../api/types/ServiceSummary";
+import { applyEvent, rowsFrom, type ServiceRow } from "../../daemonState";
 import styles from "./Dashboard.module.css";
 
-/** Daemon, và mọi thứ nó đang giám sát. */
+/**
+ * Daemon, và mọi thứ nó đang giám sát.
+ *
+ * **Trạng thái đến từ stream, không từ suy đoán.** Bấm Start thì hàng đó chuyển sang `starting` khi
+ * `service_state_changed` nói vậy, không phải ngay lúc bấm — một công tắc nói dối về việc MariaDB
+ * có đang chạy hay không tệ hơn một công tắc chậm.
+ */
 export default function Dashboard() {
   const [status, setStatus] = useState<DaemonStatus | null>(null);
-  const [rows, setRows] = useState<ServiceSummary[]>([]);
+  const [rows, setRows] = useState<ServiceRow[]>([]);
   const { t } = useTranslation();
 
   const reload = useCallback(async () => {
     const [next, list] = await Promise.all([api.status(), api.services()]);
     setStatus(next);
-    setRows(list);
+    setRows(rowsFrom(list));
   }, []);
 
   useEffect(() => {
     void reload();
+    void api.watch((raw) => {
+      setRows((current) => {
+        const next = applyEvent(current, raw);
+        // Sự kiện là best-effort: khi bus bên kia tràn hay kết nối đứt, đọc lại thay vì tin cái
+        // đang có trên màn hình.
+        if (next.resync) void reload();
+        return next.rows;
+      });
+    });
+    return () => {
+      void api.unwatch();
+    };
   }, [reload]);
 
   return (
