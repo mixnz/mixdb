@@ -207,5 +207,15 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         terminal::commands::terminal_close,
         // ── tools ──
         tools::commands::tools_listening_ports,
+        // ── mixengine ──
+        mixengine::commands::mixengine_presence,
+        mixengine::commands::mixengine_start,
+        mixengine::commands::mixengine_status,
+        mixengine::commands::mixengine_services,
+        mixengine::commands::mixengine_service_action,
+        mixengine::commands::mixengine_watch,
+        mixengine::commands::mixengine_unwatch,
+        mixengine::commands::mixengine_elevation_grant,
+        mixengine::commands::mixengine_elevation_drop,
     ]
 }
