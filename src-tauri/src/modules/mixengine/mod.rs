@@ -5,7 +5,6 @@ pub mod commands;
 pub mod endpoint;
 pub mod events;
 pub mod health;
-pub mod models;
 pub mod rpc;
 pub mod sse;
 pub mod state;

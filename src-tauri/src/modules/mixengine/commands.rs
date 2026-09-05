@@ -10,7 +10,6 @@ use tauri::State;
 
 use crate::error::AppError;
 
-use super::models::{DaemonStatus, ServiceSummary};
 use super::state::MixEngineState;
 use super::{events, health, rpc};
 
@@ -26,13 +25,19 @@ pub async fn mixengine_start() -> Result<String, AppError> {
     health::start_daemon().await
 }
 
+/// Cả hai lệnh đọc dưới đây trả thẳng `Value`, không giải vào struct của riêng MixDB.
+///
+/// Rust không đọc field nào trong hai câu trả lời này — nó chuyển tiếp. Một struct ở đây sẽ là bản
+/// chép tay thứ hai của một hợp đồng đã có bản sinh tự động ở `src/modules/mixengine/api/types/`,
+/// và bản chép tay đầu tiên đã sai ngay: nó thiếu `last_started_at` và `last_exit_code`, nên
+/// frontend gõ kiểu `ServiceSummary` sẽ nhận `undefined` cho field hợp đồng nói là có.
 #[tauri::command]
-pub async fn mixengine_status() -> Result<DaemonStatus, AppError> {
+pub async fn mixengine_status() -> Result<Value, AppError> {
     rpc::call("daemon.status", json!({})).await
 }
 
 #[tauri::command]
-pub async fn mixengine_services() -> Result<Vec<ServiceSummary>, AppError> {
+pub async fn mixengine_services() -> Result<Value, AppError> {
     rpc::call("service.list", json!({})).await
 }
 
