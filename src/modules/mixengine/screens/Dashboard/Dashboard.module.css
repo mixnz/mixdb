@@ -43,3 +43,8 @@
 .empty {
   color: var(--text-muted);
 }
+
+.actions {
+  display: flex;
+  gap: 6px;
+}

@@ -46,6 +46,13 @@ export default function Dashboard() {
         <header className={styles.header}>
           <strong>MixEngine {status.version}</strong>
           <span className={styles.home}>{status.home}</span>
+          {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
+          <button
+            onClick={() => void Promise.all(rows.map((row) => api.serviceAction(row.id, "stop")))}
+            disabled={rows.every((row) => row.state !== "running")}
+          >
+            {t("mixengine.dashboard.stopAll")}
+          </button>
         </header>
       )}
 
@@ -56,6 +63,7 @@ export default function Dashboard() {
               <th>{t("mixengine.dashboard.service")}</th>
               <th>{t("mixengine.dashboard.state")}</th>
               <th>{t("mixengine.dashboard.port")}</th>
+              <th>{t("mixengine.dashboard.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -64,6 +72,23 @@ export default function Dashboard() {
                 <td>{row.id}</td>
                 <td>{row.state ?? "—"}</td>
                 <td>{row.port ?? "—"}</td>
+                <td className={styles.actions}>
+                  <button
+                    onClick={() => void api.serviceAction(row.id, "start")}
+                    disabled={row.state === "running"}
+                  >
+                    {t("mixengine.dashboard.start")}
+                  </button>
+                  <button
+                    onClick={() => void api.serviceAction(row.id, "stop")}
+                    disabled={row.state !== "running"}
+                  >
+                    {t("mixengine.dashboard.stop")}
+                  </button>
+                  <button onClick={() => void api.serviceAction(row.id, "restart")}>
+                    {t("mixengine.dashboard.restart")}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
