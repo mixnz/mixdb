@@ -134,6 +134,15 @@ const vi: SharedDict = {
   // — xem src-tauri/src/error.rs. `{{message}}` là nguyên văn lời của driver, không dịch: đó là
   // máy chủ đang nói, và cũng là phần đáng tra cứu nhất.
   error: {
+    // MixEngine — daemon cục bộ mà app này quản lý. `message` là lời của chính daemon và không
+    // bao giờ được dịch: đó là chuỗi người ta tra cứu được.
+    mixengineNoHome: "Không xác định được MixEngine để file ở đâu.",
+    mixengineNoSid: "Không đọc được định danh Windows của tài khoản này: {{message}}",
+    mixengineUnreachable: "Không có daemon MixEngine nào trả lời ở {{endpoint}}.",
+    mixenginePipeOwner:
+      "Pipe của MixEngine ở {{endpoint}} đang do {{owner}} giữ, không phải tài khoản này.",
+    mixengineRefused: "MixEngine từ chối: {{message}}",
+    mixengineProtocol: "MixEngine trả lời một thứ phiên bản này không hiểu: {{message}}",
     // SSH
     sshTimeout:
       "Kết nối SSH tới {{host}}:{{port}} quá hạn sau {{seconds}} giây — kiểm tra host, cổng và tường lửa.",

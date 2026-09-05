@@ -141,6 +141,15 @@ const en = {
   // src-tauri/src/error.rs \u2014 and `{{message}}` is where a driver's own words go, untranslated
   // because they are the server talking and the part worth searching for.
   error: {
+    // MixEngine — the local daemon this app manages. `message` is the daemon's own words and is
+    // never translated: it is what a search engine and MixEngine's own manual both index.
+    mixengineNoHome: "Could not work out where MixEngine keeps its files.",
+    mixengineNoSid: "Could not read this account's Windows identifier: {{message}}",
+    mixengineUnreachable: "No MixEngine daemon answered at {{endpoint}}.",
+    mixenginePipeOwner:
+      "The MixEngine pipe at {{endpoint}} is held by {{owner}}, not by this account.",
+    mixengineRefused: "MixEngine refused: {{message}}",
+    mixengineProtocol: "MixEngine answered something this version does not understand: {{message}}",
     // SSH
     sshTimeout:
       "The SSH connection to {{host}}:{{port}} timed out after {{seconds}}s \u2014 check the host, the port and the firewall.",
