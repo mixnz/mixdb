@@ -3,4 +3,5 @@
 
 pub mod endpoint;
 pub mod rpc;
+pub mod sse;
 pub mod transport;
