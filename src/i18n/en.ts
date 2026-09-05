@@ -149,6 +149,7 @@ const en = {
     mixenginePipeOwner:
       "The MixEngine pipe at {{endpoint}} is held by {{owner}}, not by this account.",
     mixengineRefused: "MixEngine refused: {{message}}",
+    mixengineStartFailed: "Could not start MixEngine: {{message}}",
     mixengineProtocol: "MixEngine answered something this version does not understand: {{message}}",
     // SSH
     sshTimeout:

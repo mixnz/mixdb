@@ -3,6 +3,7 @@
 
 pub mod endpoint;
 pub mod events;
+pub mod health;
 pub mod rpc;
 pub mod sse;
 pub mod state;
