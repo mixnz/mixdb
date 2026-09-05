@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
+import ErrorBanner from "../../../../components/ErrorBanner";
+import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { DaemonStatus } from "../../api/types/DaemonStatus";
@@ -20,17 +22,38 @@ export default function Dashboard() {
   const [rows, setRows] = useState<ServiceRow[]>([]);
   const [pending, setPending] = useState<unknown[] | null>(null);
   const [jobs, setJobs] = useState<JobRow[]>([]);
+  const [error, setError] = useState("");
   const { t } = useTranslation();
 
+  /* Mọi lỗi đi qua đây thành một câu người đọc được. `errorMessage` dịch `code` và điền `params`,
+     nên `hint` của MixEngine tới người dùng nguyên vẹn thay vì rơi vào một promise không ai bắt —
+     một tab đứng im, rỗng, không nói gì là kết cục tệ hơn bất kỳ thông báo nào. */
   const reload = useCallback(async () => {
-    const [next, list] = await Promise.all([api.status(), api.services()]);
-    setStatus(next);
-    setRows(rowsFrom(list));
-  }, []);
+    try {
+      const [next, list] = await Promise.all([api.status(), api.services()]);
+      setStatus(next);
+      setRows(rowsFrom(list));
+      setError("");
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }, [t]);
+
+  /** Một hành động trên một service; hàng tự đổi khi stream nói, không phải ở đây. */
+  const act = useCallback(
+    async (id: string, action: api.ServiceAction) => {
+      try {
+        await api.serviceAction(id, action);
+      } catch (e) {
+        setError(errorMessage(t, e));
+      }
+    },
+    [t],
+  );
 
   useEffect(() => {
     void reload();
-    void api.watch((raw) => {
+    api.watch((raw) => {
       // Một lô rỗng nghĩa là không còn gì chờ — đóng hộp thoại thay vì để nó đứng đó rỗng không.
       const ops = pendingFrom(raw);
       if (ops !== null) setPending(ops.length > 0 ? ops : null);
@@ -42,21 +65,23 @@ export default function Dashboard() {
         if (next.resync) void reload();
         return next.rows;
       });
-    });
+    }).catch((e: unknown) => setError(errorMessage(t, e)));
     return () => {
       void api.unwatch();
     };
-  }, [reload]);
+  }, [reload, t]);
 
   return (
     <div className={styles.dashboard}>
+      {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
+
       {status && (
         <header className={styles.header}>
           <strong>MixEngine {status.version}</strong>
           <span className={styles.home}>{status.home}</span>
           {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
           <button
-            onClick={() => void Promise.all(rows.map((row) => api.serviceAction(row.id, "stop")))}
+            onClick={() => void Promise.all(rows.map((row) => act(row.id, "stop")))}
             disabled={rows.every((row) => row.state !== "running")}
           >
             {t("mixengine.dashboard.stopAll")}
@@ -94,18 +119,18 @@ export default function Dashboard() {
                 <td>{row.port ?? "—"}</td>
                 <td className={styles.actions}>
                   <button
-                    onClick={() => void api.serviceAction(row.id, "start")}
+                    onClick={() => void act(row.id, "start")}
                     disabled={row.state === "running"}
                   >
                     {t("mixengine.dashboard.start")}
                   </button>
                   <button
-                    onClick={() => void api.serviceAction(row.id, "stop")}
+                    onClick={() => void act(row.id, "stop")}
                     disabled={row.state !== "running"}
                   >
                     {t("mixengine.dashboard.stop")}
                   </button>
-                  <button onClick={() => void api.serviceAction(row.id, "restart")}>
+                  <button onClick={() => void act(row.id, "restart")}>
                     {t("mixengine.dashboard.restart")}
                   </button>
                 </td>

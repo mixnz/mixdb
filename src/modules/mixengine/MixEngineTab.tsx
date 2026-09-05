@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
+import ErrorBanner from "../../components/ErrorBanner";
+import { errorMessage } from "../../core/errors";
 import { useTranslation } from "../../i18n";
 import type { ModuleTabProps } from "../../shell/module";
 import * as api from "./api";
@@ -27,6 +29,7 @@ export default function MixEngineTab({ onTitleChange, restored }: ModuleTabProps
   const [screen] = useState(() => parseMixEngineTabState(restored)?.screen ?? "dashboard");
   const [presence, setPresence] = useState<api.Presence | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const { t } = useTranslation();
 
   const look = useCallback(async () => {
@@ -47,20 +50,16 @@ export default function MixEngineTab({ onTitleChange, restored }: ModuleTabProps
     onTitleChange(t("mixengine.newTabTitle"));
   }, [onTitleChange, t]);
 
-  async function start() {
+  /* Khởi động một daemon hỏng được vì nhiều lý do người dùng sửa được — chương trình không ở chỗ
+     đoán, một daemon khác đang giữ lock. Nuốt cái đó đi là để họ bấm một cái nút không làm gì. */
+  async function run(work: () => Promise<unknown>) {
     setBusy(true);
+    setError("");
     try {
-      await api.startDaemon();
+      await work();
       await look();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function retry() {
-    setBusy(true);
-    try {
-      await look();
+    } catch (e) {
+      setError(errorMessage(t, e));
     } finally {
       setBusy(false);
     }
@@ -73,14 +72,15 @@ export default function MixEngineTab({ onTitleChange, restored }: ModuleTabProps
   if (presence !== "running") {
     return (
       <div className="mixengine-root mixengine-gate">
+        {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
         <p>{t(`mixengine.gate.${presence}`)}</p>
         {presence === "notRunning" && (
-          <button onClick={() => void start()} disabled={busy}>
+          <button onClick={() => void run(api.startDaemon)} disabled={busy}>
             {busy ? t("mixengine.gate.starting") : t("mixengine.gate.start")}
           </button>
         )}
         {presence === "notAnswering" && (
-          <button onClick={() => void retry()} disabled={busy}>
+          <button onClick={() => void run(() => Promise.resolve())} disabled={busy}>
             {t("mixengine.gate.retry")}
           </button>
         )}
