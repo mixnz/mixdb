@@ -12,6 +12,7 @@ export {
   DatabaseGenericIcon,
   DotIcon,
   DownloadIcon,
+  EngineIcon,
   ExpandIcon,
   EyeIcon,
   EyeOffIcon,

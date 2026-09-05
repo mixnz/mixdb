@@ -37,6 +37,7 @@ const en = {
     moduleRest: "REST",
     moduleTerminal: "Terminal",
     moduleTools: "Tools",
+    moduleMixEngine: "MixEngine",
   },
   pagination: {
     previousPage: "Previous page",
