@@ -48,6 +48,28 @@ pub fn run_dir(home: &Path) -> PathBuf {
     home.join("run")
 }
 
+/// `<root>/config.toml` — file cấu hình của MixEngine, viết một lần lúc chạy đầu.
+pub fn config_file(home: &Path) -> PathBuf {
+    home.join("config.toml")
+}
+
+/// `[daemon] ipc_path` trong `config.toml` của MixEngine, khi có.
+///
+/// **Địa chỉ suy ra không phải lúc nào cũng là địa chỉ đúng.** Khoá này để người dùng chuyển daemon
+/// sang một endpoint khác — chính file cấu hình của MixEngine nói *"Left unset it picks a socket
+/// under run/ … which is the right answer unless that filesystem cannot host one"*. Một máy có đặt
+/// nó mà MixDB vẫn dial chỗ suy ra sẽ báo "không có daemon nào trả lời" trong khi daemon đang chạy
+/// ngay đó.
+///
+/// Thuần: nhận nội dung file, không đọc đĩa. Việc đọc là của `transport`.
+pub fn ipc_path_in(config: &str) -> Option<String> {
+    // `toml::from_str`, không phải `config.parse()`: `FromStr for Value` trong toml 1.x đọc một
+    // *giá trị* TOML, còn đây là một *document*, và `[daemon]` không phải một giá trị.
+    let parsed: toml::Value = toml::from_str(config).ok()?;
+    let path = parsed.get("daemon")?.get("ipc_path")?.as_str()?;
+    (!path.is_empty()).then(|| path.to_string())
+}
+
 /// Chỗ đứng thay cho một home, ngắn và ổn định.
 ///
 /// FNV-1a, viết ra chứ không kéo thêm crate: đây là một cái tên, không phải một lớp phòng thủ.
@@ -130,6 +152,37 @@ mod tests {
         } else {
             assert!(address.ends_with("mixengined.sock"), "{address}");
         }
+    }
+
+    /// Khoá `ipc_path` được đặt thì nó là địa chỉ, chấm hết.
+    #[test]
+    fn a_configured_ipc_path_is_read() {
+        let config = "[log]\nlevel = \"info\"\n\n[daemon]\nipc_path = \"/tmp/elsewhere.sock\"\n";
+        assert_eq!(ipc_path_in(config).as_deref(), Some("/tmp/elsewhere.sock"));
+    }
+
+    /// File mặc định của MixEngine để mọi khoá ở dạng comment — đó là hình dạng thường gặp nhất, và
+    /// nó phải đọc ra "không đặt gì" chứ không phải đọc ra chuỗi ví dụ trong comment.
+    #[test]
+    fn a_commented_out_ipc_path_is_not_set() {
+        let config = "[daemon]\n# ipc_path = \"/example/mixengined.sock\"\n";
+        assert_eq!(ipc_path_in(config), None);
+    }
+
+    /// Không có mục `daemon`, file rỗng, giá trị rỗng, hay TOML hỏng: cả bốn đều là "không đặt",
+    /// không phải lỗi — MixDB rơi về địa chỉ suy ra.
+    #[test]
+    fn anything_else_leaves_the_address_to_be_worked_out() {
+        assert_eq!(ipc_path_in(""), None);
+        assert_eq!(ipc_path_in("[log]\nlevel = \"info\"\n"), None);
+        assert_eq!(ipc_path_in("[daemon]\nipc_path = \"\"\n"), None);
+        assert_eq!(ipc_path_in("[daemon\nbroken"), None);
+    }
+
+    #[test]
+    fn the_config_file_sits_in_the_home() {
+        let file = config_file(&PathBuf::from("/home/x/mixengine"));
+        assert_eq!(file.file_name().unwrap(), "config.toml");
     }
 
     /// `MIXENGINE_HOME` thắng mặc định. Đặt và gỡ trong cùng một test: `std::env` là toàn cục và

@@ -61,6 +61,9 @@ url = "2"
 hyper = { version = "1", features = ["client", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"
+# Reads `[daemon] ipc_path` out of MixEngine's own `config.toml`, which overrides where its daemon
+# listens. Already in `Cargo.lock` through tauri, so this adds nothing to the tree.
+toml = "1"
 futures-util = "0.3.33"
 async-trait = "0.1.91"
 base64 = "0.23.1"

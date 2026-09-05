@@ -25,8 +25,20 @@ pub enum Io {
 }
 
 /// Địa chỉ endpoint của home trên máy này.
+///
+/// `config.toml` thắng: `[daemon] ipc_path` là chỗ người dùng chuyển daemon sang một endpoint khác,
+/// và một địa chỉ suy ra sẽ dial nhầm chỗ ở đúng những máy đó. Không đọc được file, hay khoá không
+/// có, thì suy ra từ `<root>/run` như thường — file này viết một lần lúc chạy đầu và vắng mặt là
+/// chuyện bình thường ở một home chưa dùng bao giờ.
 pub fn current_address() -> Result<String, AppError> {
     let home = endpoint::home().ok_or_else(|| err!("error.mixengineNoHome"))?;
+
+    if let Ok(config) = std::fs::read_to_string(endpoint::config_file(&home)) {
+        if let Some(configured) = endpoint::ipc_path_in(&config) {
+            return Ok(configured);
+        }
+    }
+
     let run = endpoint::run_dir(&home);
     Ok(endpoint::address(&run, &current_sid()?))
 }
