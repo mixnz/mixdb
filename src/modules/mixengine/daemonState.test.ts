@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyEvent, type ServiceRow } from "./daemonState";
+import { applyEvent, applyJob, type JobRow, type ServiceRow } from "./daemonState";
 
 const rows: ServiceRow[] = [
   { id: "mariadb@main", state: "running", port: 3306 },
@@ -51,5 +51,46 @@ describe("applyEvent", () => {
       .toEqual(rows);
     expect(applyEvent(rows, JSON.stringify({ type: "service_state_changed", id: "caddy@main" })).rows)
       .toEqual(rows);
+  });
+});
+
+describe("applyJob", () => {
+  const running: JobRow[] = [{ id: 7, kind: "elevation", percent: 20, message: "asking" }];
+
+  it("adds a job the first time it reports", () => {
+    const raw = JSON.stringify({
+      type: "job_progress",
+      job: 9,
+      kind: "install",
+      percent: 5,
+      message: "downloading",
+    });
+    const next = applyJob([], raw);
+    expect(next).toHaveLength(1);
+    expect(next[0]).toMatchObject({ id: 9, percent: 5, message: "downloading" });
+  });
+
+  /* Tiến độ là thứ duy nhất trên stream được phép lặp lại — nó cập nhật hàng cũ, không đẻ hàng mới. */
+  it("updates a job it already has instead of adding a second row", () => {
+    const raw = JSON.stringify({ type: "job_progress", job: 7, percent: 80, message: "granted" });
+    const next = applyJob(running, raw);
+    expect(next).toHaveLength(1);
+    expect(next[0].percent).toBe(80);
+  });
+
+  /* `kind` chỉ có ở message đầu; một message sau không được xoá nó. */
+  it("keeps the kind a later message does not repeat", () => {
+    const raw = JSON.stringify({ type: "job_progress", job: 7, percent: 80 });
+    expect(applyJob(running, raw)[0].kind).toBe("elevation");
+  });
+
+  it("takes a finished job off the list", () => {
+    expect(applyJob(running, JSON.stringify({ type: "job_finished", job: 7 }))).toHaveLength(0);
+  });
+
+  it("leaves the list alone for anything else", () => {
+    expect(applyJob(running, JSON.stringify({ type: "resync", missed: 2 }))).toEqual(running);
+    expect(applyJob(running, "not json")).toEqual(running);
+    expect(applyJob(running, JSON.stringify({ type: "job_progress" }))).toEqual(running);
   });
 });

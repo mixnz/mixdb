@@ -49,3 +49,20 @@
   display: flex;
   gap: 6px;
 }
+
+/* Tiến độ vẽ ngay tại chỗ, không phủ spinner lên cả màn hình: một job đang chạy không làm phần
+   còn lại của bảng ngừng đọc được. */
+.jobs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jobs li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

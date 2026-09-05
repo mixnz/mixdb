@@ -4,7 +4,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { DaemonStatus } from "../../api/types/DaemonStatus";
 import ElevationDialog from "../../components/ElevationDialog";
-import { applyEvent, rowsFrom, type ServiceRow } from "../../daemonState";
+import { applyEvent, applyJob, rowsFrom, type JobRow, type ServiceRow } from "../../daemonState";
 import { pendingFrom } from "../../pendingOps";
 import styles from "./Dashboard.module.css";
 
@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [status, setStatus] = useState<DaemonStatus | null>(null);
   const [rows, setRows] = useState<ServiceRow[]>([]);
   const [pending, setPending] = useState<unknown[] | null>(null);
+  const [jobs, setJobs] = useState<JobRow[]>([]);
   const { t } = useTranslation();
 
   const reload = useCallback(async () => {
@@ -33,6 +34,7 @@ export default function Dashboard() {
       // Một lô rỗng nghĩa là không còn gì chờ — đóng hộp thoại thay vì để nó đứng đó rỗng không.
       const ops = pendingFrom(raw);
       if (ops !== null) setPending(ops.length > 0 ? ops : null);
+      setJobs((current) => applyJob(current, raw));
       setRows((current) => {
         const next = applyEvent(current, raw);
         // Sự kiện là best-effort: khi bus bên kia tràn hay kết nối đứt, đọc lại thay vì tin cái
@@ -60,6 +62,18 @@ export default function Dashboard() {
             {t("mixengine.dashboard.stopAll")}
           </button>
         </header>
+      )}
+
+      {jobs.length > 0 && (
+        <ul className={styles.jobs}>
+          {jobs.map((job) => (
+            <li key={job.id}>
+              <span>{job.kind || t("mixengine.dashboard.job")}</span>
+              <progress value={job.percent} max={100} />
+              <span>{job.message}</span>
+            </li>
+          ))}
+        </ul>
       )}
 
       <div className={styles.tableWrap}>

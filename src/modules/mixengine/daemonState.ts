@@ -65,3 +65,50 @@ export function applyEvent(
       return { rows, resync: false };
   }
 }
+
+/** Một thao tác dài đang chạy. `id` là rowid của hàng `jobs` bên MixEngine. */
+export interface JobRow {
+  id: number;
+  kind: string;
+  percent: number;
+  message: string;
+}
+
+/**
+ * Job đang chạy, sau một message.
+ *
+ * `job_progress` và `job_finished` mang giá trị **đã được ghi xuống**, không phải một mô tả thứ hai
+ * về nó — nên một job kết thúc mà không sống sót qua transaction của nó thì không bao giờ được báo.
+ * Tiến độ là thứ duy nhất trên stream được phép lặp lại.
+ */
+export function applyJob(jobs: JobRow[], raw: string): JobRow[] {
+  let event: {
+    type?: unknown;
+    job?: unknown;
+    kind?: unknown;
+    percent?: unknown;
+    message?: unknown;
+  };
+  try {
+    event = JSON.parse(raw) as typeof event;
+  } catch {
+    return jobs;
+  }
+
+  const id = typeof event.job === "number" ? event.job : null;
+  if (id === null) return jobs;
+
+  if (event.type === "job_finished") return jobs.filter((job) => job.id !== id);
+  if (event.type !== "job_progress") return jobs;
+
+  const row: JobRow = {
+    id,
+    kind: typeof event.kind === "string" ? event.kind : "",
+    percent: typeof event.percent === "number" ? event.percent : 0,
+    message: typeof event.message === "string" ? event.message : "",
+  };
+  const at = jobs.findIndex((job) => job.id === id);
+  if (at === -1) return [...jobs, row];
+  // `kind` chỉ có ở message đầu; đừng để một message sau xoá nó.
+  return jobs.map((job, i) => (i === at ? { ...row, kind: row.kind || job.kind } : job));
+}
