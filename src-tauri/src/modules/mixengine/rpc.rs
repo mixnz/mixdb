@@ -18,7 +18,6 @@ use hyper_util::rt::TokioIo;
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 
-use crate::err;
 use crate::error::AppError;
 
 use super::transport::{self, Io};
