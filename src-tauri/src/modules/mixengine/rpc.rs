@@ -218,6 +218,26 @@ mod tests {
         assert!(services.get("services").is_some_and(Value::is_array), "{services}");
     }
 
+    /// Nhiều call liên tiếp, đúng cái làm hỏng bản trước.
+    ///
+    /// Trên Windows daemon giữ đúng một instance pipe chờ sẵn và chỉ dựng cái thay thế *sau khi*
+    /// đã nhận một client. Một client dial liên tiếp — mà `presence()` rồi Dashboard làm ngay khi
+    /// tab mở — rơi vào khe đó, và cả bước đọc owner lẫn bước mở đều trả `ERROR_PIPE_BUSY`. Bản
+    /// trước báo "daemon không trả lời" ở một máy daemon đang chạy bình thường.
+    #[tokio::test]
+    #[ignore]
+    async fn a_live_daemon_answers_several_calls_in_a_row() {
+        for round in 0..5 {
+            request("GET", "/health", None)
+                .await
+                .unwrap_or_else(|e| panic!("/health round {round}: {e:?}"));
+            let _: Value = call("daemon.status", json!({}))
+                .await
+                .unwrap_or_else(|e| panic!("daemon.status round {round}: {e:?}"));
+        }
+        println!("five rounds of /health + daemon.status, no busy pipe");
+    }
+
     /// Một answer thành công không phải một lỗi.
     #[test]
     fn a_result_is_not_an_error() {
