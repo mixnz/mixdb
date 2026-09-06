@@ -40,3 +40,10 @@
 .readOnly {
   opacity: 0.6;
 }
+
+.sharing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+}

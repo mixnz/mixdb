@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applySharingChange, canEditSite, type SiteRow } from "./siteState";
+import { applySharingChange, canEditSite, formatRemaining, type SiteRow } from "./siteState";
 
 describe("canEditSite", () => {
   it("a project-owned site can be edited", () => {
@@ -38,5 +38,21 @@ describe("applySharingChange", () => {
   it("a garbage payload does not throw", () => {
     expect(() => applySharingChange(rows, "not json")).not.toThrow();
     expect(applySharingChange(rows, "not json")).toBe(rows);
+  });
+});
+
+describe("formatRemaining", () => {
+  const now = 1_000_000;
+
+  it("shows minutes and seconds under an hour", () => {
+    expect(formatRemaining(now + 65_000, now)).toBe("01:05");
+  });
+
+  it("shows hours once there is more than one", () => {
+    expect(formatRemaining(now + 3_661_000, now)).toBe("01:01:01");
+  });
+
+  it("clamps a past deadline to zero rather than going negative", () => {
+    expect(formatRemaining(now - 5_000, now)).toBe("00:00");
   });
 });

@@ -37,3 +37,13 @@ export function applySharingChange(rows: SiteRow[], raw: string): SiteRow[] {
   const { domain, sharing } = event as { domain: string; sharing: SiteRow["sharing"] };
   return rows.map((row) => (row.domain === domain ? { ...row, sharing } : row));
 }
+
+/** `mm:ss`, hay `hh:mm:ss` một khi còn hơn một giờ. Quá hạn kẹp về 0, không âm. */
+export function formatRemaining(untilMs: number, nowMs: number = Date.now()): string {
+  const totalSeconds = Math.max(0, Math.round((untilMs - nowMs) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return hours > 0 ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
+}

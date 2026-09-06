@@ -6,9 +6,48 @@ import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { SiteDetail } from "../../api/types/SiteDetail";
-import { applySharingChange, canEditSite, type SiteRow } from "../../siteState";
+import type { SiteSharing } from "../../api/types/SiteSharing";
+import { applySharingChange, canEditSite, formatRemaining, type SiteRow } from "../../siteState";
+import ShareDialog from "./ShareDialog";
 import SiteForm from "./SiteForm";
 import styles from "./Sites.module.css";
+
+/** Ô chia sẻ: nút Chia sẻ khi chưa, đếm ngược sống + nút Bỏ chia sẻ khi đang. */
+function SharingCell({
+  sharing,
+  onShare,
+  onUnshare,
+}: {
+  sharing: SiteSharing | null | undefined;
+  onShare: () => void;
+  onUnshare: () => void;
+}) {
+  const { t } = useTranslation();
+  const [, forceTick] = useState(0);
+
+  useEffect(() => {
+    if (!sharing?.until) return;
+    const id = window.setInterval(() => forceTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [sharing?.until]);
+
+  if (!sharing) {
+    return (
+      <Button onClick={onShare} size="small">
+        {t("mixengine.sites.share.share")}
+      </Button>
+    );
+  }
+
+  return (
+    <span className={styles.sharing}>
+      {sharing.until ? formatRemaining(sharing.until) : t("mixengine.sites.sharingIndefinite")}
+      <Button onClick={onUnshare} size="small">
+        {t("mixengine.sites.share.unshare")}
+      </Button>
+    </span>
+  );
+}
 
 /**
  * Mọi site trong home, và trạng thái chia sẻ LAN của chúng.
@@ -22,6 +61,7 @@ export default function Sites() {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<SiteDetail | null>(null);
+  const [sharing, setSharing] = useState<string | null>(null);
   const { t } = useTranslation();
 
   const reload = useCallback(async () => {
@@ -47,6 +87,21 @@ export default function Sites() {
   async function edit(domain: string) {
     try {
       setEditing(await api.site(domain));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
+  /**
+   * Bỏ chia sẻ. Cập nhật hàng ngay khi call trả về, không đợi `site_sharing_changed` — sự kiện đó
+   * là cho lúc nó **tự** đổi (hết giờ, mất mạng), không phải cho lúc người dùng vừa bấm.
+   */
+  async function unshare(domain: string) {
+    try {
+      await api.siteUnshare(domain);
+      setRows((current) =>
+        current.map((row) => (row.domain === domain ? { ...row, sharing: null } : row)),
+      );
     } catch (e) {
       setError(errorMessage(t, e));
     }
@@ -94,11 +149,11 @@ export default function Sites() {
                 <td>{row.https ? "✓" : "—"}</td>
                 <td>{row.state}</td>
                 <td>
-                  {row.sharing
-                    ? row.sharing.until
-                      ? t("mixengine.sites.sharingUntil", { until: row.sharing.until })
-                      : t("mixengine.sites.sharingIndefinite")
-                    : "—"}
+                  <SharingCell
+                    sharing={row.sharing}
+                    onShare={() => setSharing(row.domain)}
+                    onUnshare={() => void unshare(row.domain)}
+                  />
                 </td>
                 <td>
                   <Button onClick={() => void edit(row.domain)} disabled={!canEditSite(row.owner)}>
@@ -130,6 +185,19 @@ export default function Sites() {
           onSaved={() => {
             setEditing(null);
             void reload();
+          }}
+        />
+      )}
+
+      {sharing && (
+        <ShareDialog
+          domain={sharing}
+          onCancel={() => setSharing(null)}
+          onShared={(next) => {
+            setRows((current) =>
+              current.map((row) => (row.domain === sharing ? { ...row, sharing: next } : row)),
+            );
+            setSharing(null);
           }}
         />
       )}
