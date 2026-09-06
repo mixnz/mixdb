@@ -101,3 +101,85 @@ pub async fn mixengine_elevation_grant() -> Result<Value, AppError> {
 pub async fn mixengine_elevation_drop() -> Result<Value, AppError> {
     rpc::call("elevation.drop", json!({})).await
 }
+
+/// `project` lọc theo tên; bỏ trống thấy mọi site trong home.
+#[tauri::command]
+pub async fn mixengine_sites(project: Option<String>) -> Result<Value, AppError> {
+    let params = match project {
+        Some(name) => json!({ "project": { "name": name } }),
+        None => json!({}),
+    };
+    rpc::call("site.list", params).await
+}
+
+/// Luôn tra theo domain — MixDB không dùng `SiteRef::Path`, chỉ CLI đứng trong thư mục mới cần nó.
+#[tauri::command]
+pub async fn mixengine_site(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.show", json!({ "site": { "domain": domain } })).await
+}
+
+/// `params` đã đúng hình `SiteCreate` từ frontend — không giải vào struct Rust riêng, đó sẽ là bản
+/// chép tay thứ hai của một hợp đồng đã gõ đúng ở TypeScript (spec Pha 2, mục 5).
+#[tauri::command]
+pub async fn mixengine_site_create(params: Value) -> Result<Value, AppError> {
+    rpc::call("site.create", params).await
+}
+
+/// `params` đúng hình `SiteUpdate`.
+#[tauri::command]
+pub async fn mixengine_site_update(params: Value) -> Result<Value, AppError> {
+    rpc::call("site.update", params).await
+}
+
+/// `params` đúng hình `SiteShare`.
+#[tauri::command]
+pub async fn mixengine_site_share(params: Value) -> Result<Value, AppError> {
+    rpc::call("site.share", params).await
+}
+
+#[tauri::command]
+pub async fn mixengine_site_unshare(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.unshare", json!({ "site": { "domain": domain } })).await
+}
+
+/// Chỉ để dựng dropdown project ở dialog tạo site — không phải một màn hình Projects.
+#[tauri::command]
+pub async fn mixengine_projects() -> Result<Value, AppError> {
+    rpc::call("project.list", json!({})).await
+}
+
+/// `domain.dns_status` là cả `domain.list` lẫn chẩn đoán một tên — bỏ trống `domain` thấy mọi tên.
+#[tauri::command]
+pub async fn mixengine_domains(domain: Option<String>) -> Result<Value, AppError> {
+    rpc::call("domain.dns_status", json!({ "domain": domain })).await
+}
+
+#[tauri::command]
+pub async fn mixengine_domain_add(params: Value) -> Result<Value, AppError> {
+    rpc::call("domain.add", params).await
+}
+
+#[tauri::command]
+pub async fn mixengine_domain_remove(domain: String) -> Result<Value, AppError> {
+    rpc::call("domain.remove", json!({ "domain": domain })).await
+}
+
+#[tauri::command]
+pub async fn mixengine_ca_status() -> Result<Value, AppError> {
+    rpc::call("cert.ca_status", json!({})).await
+}
+
+/// Sửa nửa "trình duyệt" của CA. `grant: true` cứng — giả định của plan Pha 2: sửa NSS database
+/// không cần quyền quản trị. Nếu đo trên daemon thật thấy sai, đổi sang luồng hai bước như
+/// `elevation.*` ở Dashboard.
+#[tauri::command]
+pub async fn mixengine_ca_repair() -> Result<Value, AppError> {
+    rpc::call("daemon.doctor_repair", json!({ "grant": true })).await
+}
+
+/// Bỏ trống `domain` để cấp cho mọi site có khai HTTPS — cùng một call vẽ bảng lẫn cấp lại.
+#[tauri::command]
+pub async fn mixengine_certs(domain: Option<String>) -> Result<Value, AppError> {
+    let site = domain.map(|d| json!({ "domain": d }));
+    rpc::call("cert.issue", json!({ "site": site })).await
+}

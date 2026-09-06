@@ -3,6 +3,17 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import type { DaemonStatus } from "./api/types/DaemonStatus";
 import type { ElevationStatus } from "./api/types/ElevationStatus";
 import type { ServiceList } from "./api/types/ServiceList";
+import type { SiteCreate } from "./api/types/SiteCreate";
+import type { SiteCreation } from "./api/types/SiteCreation";
+import type { SiteDetail } from "./api/types/SiteDetail";
+import type { SiteList } from "./api/types/SiteList";
+import type { SiteShare } from "./api/types/SiteShare";
+import type { SiteSharing } from "./api/types/SiteSharing";
+import type { SiteUpdate } from "./api/types/SiteUpdate";
+import type { ProjectList } from "./api/types/ProjectList";
+import type { DomainStatusReport } from "./api/types/DomainStatusReport";
+import type { CaStatus } from "./api/types/CaStatus";
+import type { CertIssueReport } from "./api/types/CertIssueReport";
 
 /**
  * Chỗ duy nhất module này gọi `invoke()`.
@@ -76,4 +87,65 @@ export function elevationGrant(): Promise<unknown> {
 /** Bỏ cả lô đi. Từ chối là một kết cục bình thường, không phải một lỗi. */
 export function elevationDrop(): Promise<unknown> {
   return invoke("mixengine_elevation_drop");
+}
+
+/** `project` lọc theo tên; bỏ trống thấy mọi site trong home. */
+export function sites(project?: string): Promise<SiteList> {
+  return invoke<SiteList>("mixengine_sites", { project });
+}
+
+/** Mọi thứ chỉ một lookup mới trả lời được: `doc_root_full`, `pool`, `services`. */
+export function site(domain: string): Promise<SiteDetail> {
+  return invoke<SiteDetail>("mixengine_site", { domain });
+}
+
+export function siteCreate(input: SiteCreate): Promise<SiteCreation> {
+  return invoke<SiteCreation>("mixengine_site_create", { params: input });
+}
+
+/** `domains`/`services` thay thế toàn bộ danh sách site đang có, không merge. */
+export function siteUpdate(input: SiteUpdate): Promise<{ site: SiteDetail }> {
+  return invoke("mixengine_site_update", { params: input });
+}
+
+export function siteShare(input: SiteShare): Promise<SiteSharing> {
+  return invoke<SiteSharing>("mixengine_site_share", { params: input });
+}
+
+export function siteUnshare(domain: string): Promise<unknown> {
+  return invoke("mixengine_site_unshare", { domain });
+}
+
+/** Chỉ để dựng dropdown project ở dialog tạo site — không phải một màn hình Projects. */
+export function projects(): Promise<ProjectList> {
+  return invoke<ProjectList>("mixengine_projects");
+}
+
+/** `domain.dns_status` là cả liệt kê lẫn chẩn đoán một tên — bỏ trống `domain` thấy mọi tên. */
+export function domains(domain?: string): Promise<DomainStatusReport> {
+  return invoke<DomainStatusReport>("mixengine_domains", { domain });
+}
+
+export function domainAdd(site: string, domain: string, acceptRiskyTld: boolean): Promise<unknown> {
+  return invoke("mixengine_domain_add", {
+    params: { site: { domain: site }, domain, accept_risky_tld: acceptRiskyTld },
+  });
+}
+
+export function domainRemove(domain: string): Promise<unknown> {
+  return invoke("mixengine_domain_remove", { domain });
+}
+
+/** Hai câu trả lời tin cậy, không phải một: `trust` là kho hệ thống, `browsers` là NSS database. */
+export function caStatus(): Promise<CaStatus> {
+  return invoke<CaStatus>("mixengine_ca_status");
+}
+
+export function caRepair(): Promise<unknown> {
+  return invoke("mixengine_ca_repair");
+}
+
+/** Bỏ trống `domain` để cấp cho mọi site có khai HTTPS — cùng một call vẽ bảng lẫn cấp lại. */
+export function certs(domain?: string): Promise<CertIssueReport> {
+  return invoke<CertIssueReport>("mixengine_certs", { domain });
 }

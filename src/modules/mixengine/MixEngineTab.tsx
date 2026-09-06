@@ -6,8 +6,11 @@ import { errorMessage } from "../../core/errors";
 import { useTranslation } from "../../i18n";
 import type { ModuleTabProps } from "../../shell/module";
 import * as api from "./api";
+import Sidebar from "./components/Sidebar";
 import Dashboard from "./screens/Dashboard";
-import { parseMixEngineTabState } from "./tabState";
+import Domains from "./screens/Domains";
+import Sites from "./screens/Sites";
+import { parseMixEngineTabState, type MixEngineScreen } from "./tabState";
 import "./mixengine.css";
 
 /** Trang cài đặt của MixEngine, cho một máy chưa có nó. */
@@ -24,9 +27,11 @@ const INSTALL_PAGE = "https://mixnz.github.io/mixengine/en/install/";
  * đang tìm nhầm tab; khởi động một daemon đang giám sát database thì không rẻ như vậy. Nút nói rõ
  * nó sắp làm gì.
  */
-export default function MixEngineTab({ onTitleChange, restored }: ModuleTabProps) {
+export default function MixEngineTab({ onTitleChange, onStateChange, restored }: ModuleTabProps) {
   // Đọc một lần, lúc mount — đọc reactively là module tự ghi đè chính nó ngay khi nó ghi.
-  const [screen] = useState(() => parseMixEngineTabState(restored)?.screen ?? "dashboard");
+  const [screen, setScreen] = useState<MixEngineScreen>(
+    () => parseMixEngineTabState(restored)?.screen ?? "dashboard",
+  );
   const [presence, setPresence] = useState<api.Presence | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -91,5 +96,19 @@ export default function MixEngineTab({ onTitleChange, restored }: ModuleTabProps
     );
   }
 
-  return <div className="mixengine-root">{screen === "dashboard" && <Dashboard />}</div>;
+  function selectScreen(next: MixEngineScreen) {
+    setScreen(next);
+    onStateChange({ screen: next });
+  }
+
+  return (
+    <div className="mixengine-root mixengine-layout">
+      <Sidebar screen={screen} onSelect={selectScreen} />
+      <div className="mixengine-screen">
+        {screen === "dashboard" && <Dashboard />}
+        {screen === "sites" && <Sites />}
+        {screen === "domains" && <Domains />}
+      </div>
+    </div>
+  );
 }
