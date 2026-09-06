@@ -16,6 +16,21 @@ import type { ProjectCreate } from "./api/types/ProjectCreate";
 import type { ProjectUpdate } from "./api/types/ProjectUpdate";
 import type { ProjectRemoval } from "./api/types/ProjectRemoval";
 import type { ProjectSummary } from "./api/types/ProjectSummary";
+import type { RuntimeKind } from "./api/types/RuntimeKind";
+import type { RuntimeList } from "./api/types/RuntimeList";
+import type { RuntimeCatalogue } from "./api/types/RuntimeCatalogue";
+import type { RuntimeTarget } from "./api/types/RuntimeTarget";
+import type { RuntimeUninstall } from "./api/types/RuntimeUninstall";
+import type { RuntimeRemoval } from "./api/types/RuntimeRemoval";
+import type { RuntimeSummary } from "./api/types/RuntimeSummary";
+import type { RuntimeExtension } from "./api/types/RuntimeExtension";
+import type { ExtensionChoice } from "./api/types/ExtensionChoice";
+import type { ExtensionChange } from "./api/types/ExtensionChange";
+import type { JobSummary } from "./api/types/JobSummary";
+import type { PackageList } from "./api/types/PackageList";
+import type { PackageCatalogue } from "./api/types/PackageCatalogue";
+import type { PackageTarget } from "./api/types/PackageTarget";
+import type { PackageRemoval } from "./api/types/PackageRemoval";
 import type { DomainStatusReport } from "./api/types/DomainStatusReport";
 import type { CaStatus } from "./api/types/CaStatus";
 import type { CertIssueReport } from "./api/types/CertIssueReport";
@@ -171,4 +186,50 @@ export function caRepair(): Promise<unknown> {
 /** Bỏ trống `domain` để cấp cho mọi site có khai HTTPS — cùng một call vẽ bảng lẫn cấp lại. */
 export function certs(domain?: string): Promise<CertIssueReport> {
   return invoke<CertIssueReport>("mixengine_certs", { domain });
+}
+
+export function runtimesInstalled(kind?: RuntimeKind): Promise<RuntimeList> {
+  return invoke<RuntimeList>("mixengine_runtime_list_installed", { filter: { kind } });
+}
+
+export function runtimesAvailable(kind?: RuntimeKind): Promise<RuntimeCatalogue> {
+  return invoke<RuntimeCatalogue>("mixengine_runtime_list_available", { filter: { kind } });
+}
+
+export function runtimeInstall(target: RuntimeTarget): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_runtime_install", { target });
+}
+
+export function runtimeUninstall(params: RuntimeUninstall): Promise<RuntimeRemoval> {
+  return invoke<RuntimeRemoval>("mixengine_runtime_uninstall", { params });
+}
+
+export function runtimeSetDefault(target: RuntimeTarget): Promise<RuntimeSummary> {
+  return invoke<RuntimeSummary>("mixengine_runtime_set_default", { target });
+}
+
+/** `runtime.list_extensions` trả một mảng trần theo bindings — không bọc trong `{ extensions: [] }`
+ *  như `service.list`/`runtime.list_installed` làm; xác nhận lại khi Task 8 chạy thật với daemon. */
+export function runtimeExtensions(target: RuntimeTarget): Promise<RuntimeExtension[]> {
+  return invoke<RuntimeExtension[]>("mixengine_runtime_list_extensions", { target });
+}
+
+export function runtimeSetExtension(choice: ExtensionChoice): Promise<ExtensionChange> {
+  return invoke<ExtensionChange>("mixengine_runtime_set_extension", { choice });
+}
+
+export function packagesInstalled(name?: string): Promise<PackageList> {
+  return invoke<PackageList>("mixengine_package_list", { filter: { package: name } });
+}
+
+export function packagesAvailable(name?: string): Promise<PackageCatalogue> {
+  return invoke<PackageCatalogue>("mixengine_package_list_available", { filter: { package: name } });
+}
+
+export function packageInstall(target: PackageTarget): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_package_install", { target });
+}
+
+export function packageUninstall(target: PackageTarget): Promise<PackageRemoval> {
+  return invoke<PackageRemoval>("mixengine_package_uninstall", { target });
 }
