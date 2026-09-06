@@ -8,6 +8,7 @@ import * as api from "../../api";
 import type { DomainStatus } from "../../api/types/DomainStatus";
 import AddDomainDialog from "./AddDomainDialog";
 import CaBlock from "./CaBlock";
+import CertTable from "./CertTable";
 import styles from "./Domains.module.css";
 
 /**
@@ -94,6 +95,8 @@ export default function Domains() {
       </div>
 
       {rows.length === 0 && <p className={styles.empty}>{t("mixengine.domains.empty")}</p>}
+
+      <CertTable onError={setError} />
 
       {adding && (
         <AddDomainDialog
