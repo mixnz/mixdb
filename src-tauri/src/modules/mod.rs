@@ -225,5 +225,11 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_site_share,
         mixengine::commands::mixengine_site_unshare,
         mixengine::commands::mixengine_projects,
+        mixengine::commands::mixengine_domains,
+        mixengine::commands::mixengine_domain_add,
+        mixengine::commands::mixengine_domain_remove,
+        mixengine::commands::mixengine_ca_status,
+        mixengine::commands::mixengine_ca_repair,
+        mixengine::commands::mixengine_certs,
     ]
 }
