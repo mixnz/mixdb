@@ -114,6 +114,28 @@ The `.msi` was dropped when self-updating went in. It installs per-machine, the 
 updater uses installs per-user, and shipping both would have left some users with two MixDBs in two
 places, only one of which ever updated.
 
+## The site's download links
+
+[site/index.html](../site/index.html) links each OS straight to an installer instead of to the
+releases page, using four version-less names that `merge-manifest` uploads alongside the real,
+versioned ones once every platform has finished building:
+
+| Alias | Points at |
+| --- | --- |
+| `MixDB-windows-x64-setup.exe` | the NSIS installer |
+| `MixDB-macos-universal.dmg` | the universal `.dmg` |
+| `MixDB-linux-x64.AppImage` | the AppImage |
+| `MixDB-linux-x64.deb` | the `.deb` |
+
+Each is just a copy of that release's real asset, re-uploaded with `--clobber` under the fixed
+name. `https://github.com/mixnz/mixdb/releases/latest/download/<alias>` then always resolves
+against whichever release is newest — the site never needs an edit when a version ships. A
+platform whose build failed leaves its alias untouched on the previous release rather than
+missing entirely, the same tolerance `build-manifest.mjs` has for a missing `.sig`.
+
+This is a different thing from the Store URL below, which must stay versioned — these aliases are
+extra assets for a human clicking a button, not the one URL a certification remembers.
+
 ## Signing
 
 Two different things are called signing here, and only one of them is done.

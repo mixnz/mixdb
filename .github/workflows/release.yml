@@ -249,3 +249,42 @@ jobs:
           set -euo pipefail
           gh release upload "${{ steps.version.outputs.tag }}" \
             --repo "${{ github.repository }}" latest.json --clobber
+
+      # Extra copies of the installers under names with no version in them, uploaded alongside the
+      # versioned ones tauri-action already attached. `releases/latest/download/<name>` resolves
+      # the same fixed name against whichever release is newest, so these four URLs are what
+      # site/index.html links to — one per OS, never needing an edit again.
+      #
+      # The versioned originals are untouched and still what the Microsoft Store submission and
+      # latest.json point at — see the "Store" and "package URL is versioned" notes in
+      # docs/RELEASING.md for why those must stay pinned to one release.
+      #
+      # A platform whose build failed just has nothing to download here; `gh release download`
+      # exits non-zero and the loop skips its alias instead of failing the whole job, the same way
+      # build-manifest.mjs skips a platform with no `.sig`.
+      - name: Publish per-OS "latest" download aliases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          tag="${{ steps.version.outputs.tag }}"
+          mkdir aliases
+
+          publish_alias() {
+            local source_name="$1"
+            local alias_name="$2"
+            if gh release download "$tag" --repo "${{ github.repository }}" \
+                --pattern "$source_name" --dir aliases --clobber; then
+              cp "aliases/$source_name" "aliases/$alias_name"
+              gh release upload "$tag" "aliases/$alias_name" \
+                --repo "${{ github.repository }}" --clobber
+            else
+              echo "::warning::$source_name is missing from $tag — skipping the $alias_name alias"
+            fi
+          }
+
+          publish_alias "MixDB_${version}_x64-setup.exe" "MixDB-windows-x64-setup.exe"
+          publish_alias "MixDB_${version}_universal.dmg" "MixDB-macos-universal.dmg"
+          publish_alias "MixDB_${version}_amd64.AppImage" "MixDB-linux-x64.AppImage"
+          publish_alias "MixDB_${version}_amd64.deb" "MixDB-linux-x64.deb"
