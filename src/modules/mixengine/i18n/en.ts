@@ -79,6 +79,9 @@ export default {
         unresolved: "Not installed — {{hint}}",
       },
     },
+    runtimes: {
+      stale: "This list may be out of date",
+    },
     sites: {
       columnDomain: "Domain",
       columnOwner: "Owner",

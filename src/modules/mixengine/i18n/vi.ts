@@ -77,6 +77,9 @@ const vi: typeof en = {
         unresolved: "Chưa cài — {{hint}}",
       },
     },
+    runtimes: {
+      stale: "Danh sách có thể cũ",
+    },
     sites: {
       columnDomain: "Domain",
       columnOwner: "Chủ sở hữu",
