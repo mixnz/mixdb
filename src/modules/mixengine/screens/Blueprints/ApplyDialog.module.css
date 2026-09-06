@@ -1,18 +1,11 @@
 .overlay {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 40%);
+  composes: overlay from "../../../../components/Modal/surface.module.css";
 }
 
 .dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--surface, #fff);
-  border-radius: 8px;
+  composes: dialog from "../../../../components/Modal/surface.module.css";
   padding: 24px;
-  width: 520px;
+  width: min(520px, calc(100vw - 2rem));
   max-height: 80vh;
   overflow-y: auto;
 }
@@ -91,7 +84,9 @@
 .log {
   max-height: 200px;
   overflow-y: auto;
-  background: var(--surface-muted, #f5f5f5);
+  /* Lõm xuống dưới mặt dialog. `--page-bg`, không phải `--surface-bg`: bề mặt dialog đã là
+     `--surface-bg`, nên khối log phải là màu nằm sau nó mới đọc ra là thụt vào. */
+  background: var(--page-bg);
   padding: 8px;
   font-family: var(--font-mono);
   font-size: 12px;

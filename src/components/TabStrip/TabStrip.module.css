@@ -135,13 +135,23 @@
      nhưng nó vẽ *hình* của tab thay vì gắn thêm một thanh vào tab, nên nó không lặp lại tín hiệu
      mà ba tầng bên dưới đang dùng. */
   box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / 0.55);
-  /* Và tab liền mặt với pane bên dưới: 1px này đè lên đường kẻ đáy của dải tab, nên tab đang mở
-     không còn bị một nét ngăn với nội dung của nó. Đó là thứ làm một cái tab đọc ra là tab, và nó
-     đổi chiều cao chứ không đổi bề rộng — dải tab lúc nào cũng có đúng một tab đang mở, nên chiều
-     cao của dải không nhúc nhích. */
-  margin-bottom: -1px;
-  padding-bottom: calc(0.45rem + 1px);
 }
+
+/* Ở đây từng có `margin-bottom: -1px` cộng `padding-bottom: calc(0.45rem + 1px)`, để tab đang mở
+   đè lên đường kẻ đáy của dải và liền mặt với pane bên dưới.
+ *
+ * **Nó không bao giờ vẽ ra được, và nó đẻ ra một thanh cuộn.** Tab nằm trong `.scroller`, và
+ * `.scroller` phải clip để cuộn ngang — nên 1px thò xuống bị cắt trước khi tới màn hình. Đo được:
+ * đáy border box của tab đang mở nằm đúng 1px dưới đáy hộp của `.scroller`, ngoài vùng clip.
+ *
+ * Cái 1px đó vẫn nằm trong *vùng cuộn* của `.scroller`, và vì `.scroller` chỉ khai `overflow-x`
+ * nên trục dọc bị CSS tính thành `auto` — thành ra dải tab cuộn dọc được 1px. Đo được:
+ * `scrollHeight` 31 với `clientHeight` 30 khi có tab đang mở, 30/30 khi không có.
+ *
+ * Khai thêm `overflow-y` không cứu được: `hidden` chỉ giấu thanh cuộn, và `clip` bị tính thành
+ * `hidden` khi trục kia đang cuộn — cả hai đều để nguyên 1px thừa. Đường duy nhất là đừng sinh ra
+ * nó. Muốn seam đó chạy thật thì phải để dải tab tự ngắt đường kẻ đáy của nó dưới tab đang mở,
+ * chứ không phải để tab thò ra khỏi một cái hộp đang clip. */
 
 /* ---------------------------------------------------------------------------------------------
    IN HAND

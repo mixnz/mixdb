@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 
+import ContextMenu from "../../../../components/ContextMenu";
 import ErrorBanner from "../../../../components/ErrorBanner";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { DaemonStatus } from "../../api/types/DaemonStatus";
 import ElevationDialog from "../../components/ElevationDialog";
+import ServiceForm from "../../components/ServiceForm";
 import {
   applyEvent,
   applyJob,
@@ -15,6 +17,7 @@ import {
   type ServiceRow,
 } from "../../daemonState";
 import { pendingFrom } from "../../pendingOps";
+import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
 import styles from "./Dashboard.module.css";
 
 /* Bảng tra tường minh chứ không ghép `${action}ing`: "stop" + "ing" ra "stoping", và một khoá dịch
@@ -40,8 +43,11 @@ export default function Dashboard() {
   const [waiting, setWaiting] = useState(0);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
   /** Service nào đang có một hành động bay, và là hành động nào. Khoá theo id. */
   const [busy, setBusy] = useState<Record<string, api.ServiceAction>>({});
+  /** Menu của một hàng, và chỗ nó được mở ra. `null` là không có menu nào đang mở. */
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const { t } = useTranslation();
 
   /* Mọi lỗi đi qua đây thành một câu người đọc được. `errorMessage` dịch `code` và điền `params`,
@@ -125,6 +131,37 @@ export default function Dashboard() {
     };
   }, [reload, t]);
 
+
+
+  /**
+   * Hàng này có mở được thư mục data của nó không — **hiện tại luôn là không**.
+   *
+   * Daemon *biết* thư mục đó: `ServiceRemoval.data_kept` nêu tên nó ra. Nhưng nó chỉ nói ở
+   * `service.delete`; không method đọc nào trả về đường dẫn, và `ServiceSummary` — thứ cả
+   * `service.list` lẫn `service.status` trả về — không có field nào cho nó.
+   *
+   * Suy ra từ `daemon.status.home` cộng quy ước `data/<package>/<instance>` thì chạy được với mọi
+   * service trên máy hôm nay, nhưng `ServiceCreate.data_dir` cho phép đặt chỗ khác — và một nút mở
+   * nhầm thư mục thì tệ hơn một nút xám. Nên nút ở đây xám cho tới khi có một method đọc trả về
+   * đường dẫn; lúc đó chỉ hàm này đổi, phần menu bên dưới đã sẵn sàng.
+   */
+  function canOpenDataDir(): boolean {
+    return false;
+  }
+
+
+  /** Class màu cho một trạng thái; chuỗi rỗng cho trạng thái không biết, để nó vẽ như chữ thường. */
+  function toneClass(state: string | null | undefined): string {
+    const tone = serviceStateTone(state);
+    return tone === null ? "" : styles[tone];
+  }
+
+  /** Trạng thái đã dịch; một trạng thái daemon mới hơn build này hiện nguyên văn. */
+  function stateLabel(state: string | null | undefined): string {
+    const key = serviceStateKey(state);
+    return key === null ? (state ?? "—") : t(key);
+  }
+
   return (
     <div className={styles.dashboard}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
@@ -145,6 +182,9 @@ export default function Dashboard() {
             }
           >
             {t("mixengine.dashboard.stopAll")}
+          </button>
+          <button onClick={() => setCreating(true)}>
+            {t("mixengine.serviceForm.newService")}
           </button>
           {/* Không tự bật hộp thoại lúc mở tab: một lô có thể nằm chờ nhiều ngày, và một modal bật
               lên mỗi lần mở tab là thứ người ta học cách bấm bỏ mà không đọc. Một dòng bấm được
@@ -171,6 +211,14 @@ export default function Dashboard() {
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
+          {/* Bề rộng khai ở đây chứ không để nội dung quyết — xem `table-layout: fixed` bên CSS.
+              Tỉ lệ lấy từ bề rộng nội tại đo được của từng cột, không phải ước lượng. */}
+          <colgroup>
+            <col style={{ width: "24%" }} />
+            <col style={{ width: "31%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "36%" }} />
+          </colgroup>
           <thead>
             <tr>
               <th>{t("mixengine.dashboard.service")}</th>
@@ -182,35 +230,73 @@ export default function Dashboard() {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.id}</td>
+                {/* Cột cố định không nới ra cho một id dài, nên id đầy đủ ở lại trong `title`. */}
+                <td title={row.id}>{row.id}</td>
                 <td>
                   {busy[row.id] ? (
-                    <span className={styles.pending}>
+                    /* Một hành động vừa gửi đi và chưa có sự kiện nào xác nhận: cũng là "đang
+                       chuyển", nên cùng màu với `starting`/`stopping`, chỉ thêm nghiêng. */
+                    <span className={`${styles.pending} ${styles.busy}`}>
                       {t(PENDING_LABEL[busy[row.id]])}
                     </span>
                   ) : (
-                    (row.state ?? "—")
+                    <span className={toneClass(row.state)}>{stateLabel(row.state)}</span>
                   )}
                 </td>
                 <td>{row.port ?? "—"}</td>
                 <td className={styles.actions}>
+                  {/* Nghỉ thì là một cái đèn báo, chạm vào thì là một cái nút. Màu lúc nghỉ nói
+                      *trạng thái* (cùng bảng với cột State), màu lúc hover nói *việc sắp làm*.
+                      `aria-label` mang việc đó kèm tên service, nên trình đọc màn hình nghe được
+                      "Tắt mariadb@main" chứ không nghe một cái nút không tên. */}
+                  {(() => {
+                    const mode = toggleMode(row.state, busy[row.id] !== undefined);
+                    if (mode === "moving") {
+                      return (
+                        <button
+                          className={`${styles.toggle} ${styles.moving}`}
+                          aria-label={t("mixengine.dashboard.moving", { service: row.id })}
+                          disabled
+                        >
+                          <span className={styles.dots} aria-hidden="true">
+                            <i />
+                            <i />
+                            <i />
+                          </span>
+                        </button>
+                      );
+                    }
+                    const action = mode === "up" ? "stop" : "start";
+                    const label = t(`mixengine.dashboard.${action}`);
+                    return (
+                      <button
+                        className={`${styles.toggle} ${styles[mode]} ${toneClass(row.state)}`}
+                        aria-label={t(`mixengine.dashboard.${action}Service`, { service: row.id })}
+                        onClick={() => void act(row.id, action)}
+                      >
+                        <span className={styles.dot} aria-hidden="true" />
+                        <span className={styles.label}>{label}</span>
+                      </button>
+                    );
+                  })()}
                   <button
-                    onClick={() => void act(row.id, "start")}
-                    disabled={row.state === "running" || busy[row.id] !== undefined}
-                  >
-                    {t("mixengine.dashboard.start")}
-                  </button>
-                  <button
-                    onClick={() => void act(row.id, "stop")}
-                    disabled={row.state !== "running" || busy[row.id] !== undefined}
-                  >
-                    {t("mixengine.dashboard.stop")}
-                  </button>
-                  <button
+                    className={styles.restart}
                     onClick={() => void act(row.id, "restart")}
                     disabled={busy[row.id] !== undefined}
                   >
                     {t("mixengine.dashboard.restart")}
+                  </button>
+                  <button
+                    className={styles.more}
+                    aria-label={t("mixengine.dashboard.rowMenu")}
+                    title={t("mixengine.dashboard.noDataDir")}
+                    disabled={!canOpenDataDir()}
+                    onClick={(e) => {
+                      const at = e.currentTarget.getBoundingClientRect();
+                      setMenu({ id: row.id, x: at.left, y: at.bottom });
+                    }}
+                  >
+                    ⋮
                   </button>
                 </td>
               </tr>
@@ -220,6 +306,27 @@ export default function Dashboard() {
       </div>
 
       {rows.length === 0 && <p className={styles.empty}>{t("mixengine.dashboard.noServices")}</p>}
+
+      {/* Chỉ dựng khi có hàng nào mở nó ra — mà hiện chưa hàng nào mở được, vì `canOpenDataDir`
+          còn trả `false`. Phần khung để sẵn ở đây nên lúc daemon có đường dẫn thì không phải nghĩ
+          lại từ đầu. */}
+      {menu !== null && (
+        <ContextMenu x={menu.x} y={menu.y} onClose={() => setMenu(null)}>
+          <button type="button" onClick={() => setMenu(null)}>
+            {t("mixengine.dashboard.openDataDir")}
+          </button>
+        </ContextMenu>
+      )}
+
+      {creating && (
+        <ServiceForm
+          onCancel={() => setCreating(false)}
+          onCreated={() => {
+            setCreating(false);
+            void reload();
+          }}
+        />
+      )}
 
       {pending && (
         <ElevationDialog

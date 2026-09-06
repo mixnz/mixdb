@@ -41,14 +41,26 @@ pub async fn mixengine_services() -> Result<Value, AppError> {
     rpc::call("service.list", json!({})).await
 }
 
-/// `start`, `stop` hoặc `restart` một service.
+/// Method và params của một hành động trên service. Tách khỏi lệnh để có chỗ mà test: cái sai ở
+/// đây không ra lỗi, nó ra một hành động đúng trên sai đối tượng.
 ///
-/// Ba method này là ngoại lệ duy nhất của MixEngine nhận `wait` thay vì trả về một job: thời gian
-/// chờ bị chặn bởi ready timeout mà recipe của chính service khai, và mọi bước đã ở trên stream sự
-/// kiện — nên một call đang chờ không bao giờ là một call mù.
-#[tauri::command]
-pub async fn mixengine_service_action(id: String, action: String) -> Result<Value, AppError> {
-    let method = match action.as_str() {
+/// **Field là `service`.** `ServiceTarget` — params dùng chung của cả ba method — khai
+/// `service?: ServiceId | null` và nói rõ vắng mặt nghĩa là *mọi service đã khai*. Gửi `id` từng
+/// làm mỗi lần bấm Start ở một hàng thành một lệnh start-tất-cả, không một câu lỗi nào.
+///
+/// **`wait: true`, dù doc của `ServiceTarget` viết "A GUI sends `false`."** Lời khuyên đó giả định
+/// một GUI vẽ *hoàn toàn* từ stream. Dashboard bên này thì không: `act()` gọi `reload()` ngay khi
+/// call trả về. Với `wait: false` call trả về tức thì, nên `reload()` đọc `service.list` **giữa
+/// lúc kế hoạch đang chạy** và ghi đè trạng thái mà stream vừa áp vào bằng số liệu cũ hơn — hàng
+/// nhảy về trạng thái cũ rồi mới tự sửa khi sự kiện kế tiếp tới.
+///
+/// Với `wait: true`, call trả về khi kế hoạch đã xong: `reload()` đọc được sự thật, và nhãn "đang
+/// bật…" ở lại suốt thời gian đó thay vì tắt ngay lập tức. Chờ ở đây không làm đứng cửa sổ — nó là
+/// `async`, chỉ mấy nút của đúng hàng đó bị khoá.
+///
+/// Đổi sang `false` chỉ đúng khi `act()` thôi tự `reload()` và để stream là đường duy nhất.
+fn service_action_call(id: &str, action: &str) -> Result<(&'static str, Value), AppError> {
+    let method = match action {
         "start" => "service.start",
         "stop" => "service.stop",
         "restart" => "service.restart",
@@ -61,7 +73,16 @@ pub async fn mixengine_service_action(id: String, action: String) -> Result<Valu
             ))
         }
     };
-    rpc::call(method, json!({ "id": id, "wait": true })).await
+    Ok((method, json!({ "service": id, "wait": true })))
+}
+
+/// `start`, `stop` hoặc `restart` một service.
+///
+/// Ba method này là ngoại lệ duy nhất của MixEngine nhận `wait` thay vì trả về một job.
+#[tauri::command]
+pub async fn mixengine_service_action(id: String, action: String) -> Result<Value, AppError> {
+    let (method, params) = service_action_call(&id, &action)?;
+    rpc::call(method, params).await
 }
 
 /// Mở stream sự kiện. Mở lại là đóng cái đang mở.
@@ -311,6 +332,15 @@ pub async fn mixengine_service_set_idle(params: Value) -> Result<Value, AppError
     rpc::call("service.set_idle", params).await
 }
 
+/// `params` đúng hình `ServiceCreate { id, version, port?, bind_addr?, data_dir?, autostart?,
+/// overrides? }` — không giải vào struct Rust riêng, cùng lý do `mixengine_site_create` đã theo.
+/// Trả `ServiceCreation { service, moved_from? }`: `moved_from` là câu chỉ đúng ở khoảnh khắc này,
+/// nên nó ở đây chứ không ở `service.list`.
+#[tauri::command]
+pub async fn mixengine_service_create(params: Value) -> Result<Value, AppError> {
+    rpc::call("service.create", params).await
+}
+
 /// `params` đúng hình `ServiceDelete { service, force? }`. Trả `ServiceRemoval { removed,
 /// data_kept? }` — `force` chỉ vượt qua một site đang khai service này, không vượt qua một tiến
 /// trình đang chạy; thư mục dữ liệu không bao giờ bị xoá, chỉ được nêu tên nếu có.
@@ -446,4 +476,51 @@ pub async fn mixengine_extension_start(id: String) -> Result<Value, AppError> {
 #[tauri::command]
 pub async fn mixengine_extension_stop(id: String) -> Result<Value, AppError> {
     rpc::call("extension.stop", json!({ "id": id })).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// **Tên field là `service`, không phải `id`.** `ServiceTarget` — params dùng chung của
+    /// `service.start/stop/restart` — nói rõ trường đó vắng mặt nghĩa là *mọi service đã khai*.
+    /// Nên gõ nhầm tên khoá không ra một lỗi: nó ra một lệnh bấm-tất-cả, im lặng, ở mọi hàng.
+    #[test]
+    fn an_action_names_the_service_it_is_about() {
+        let (method, params) = service_action_call("mariadb@main", "start").expect("a known action");
+        assert_eq!(method, "service.start");
+        assert_eq!(params["service"], "mariadb@main");
+        assert!(
+            params.get("id").is_none(),
+            "`id` is not a field of ServiceTarget; sending it leaves `service` absent"
+        );
+    }
+
+    /// `wait: true`: `act()` bên Dashboard `reload()` ngay khi call trả về, nên một call trả về
+    /// trước khi kế hoạch xong sẽ đọc `service.list` giữa chừng và ghi đè trạng thái stream vừa
+    /// áp vào bằng số cũ hơn. Xem doc của `service_action_call` cho điều kiện để đổi lại `false`.
+    #[test]
+    fn the_call_waits_because_the_screen_reloads_after_it() {
+        let (_, params) = service_action_call("caddy", "stop").expect("a known action");
+        assert_eq!(params["wait"], true);
+    }
+
+    #[test]
+    fn each_action_maps_to_its_own_method() {
+        for (action, method) in [
+            ("start", "service.start"),
+            ("stop", "service.stop"),
+            ("restart", "service.restart"),
+        ] {
+            let (mapped, _) = service_action_call("caddy", action).expect("a known action");
+            assert_eq!(mapped, method);
+        }
+    }
+
+    /// Frontend là chỗ duy nhất gọi lệnh này, nên một `action` lạ là lỗi lập trình — và nó phải
+    /// đi ra như một lỗi, không phải rơi vào một method đoán bừa.
+    #[test]
+    fn an_unknown_action_is_refused_rather_than_guessed() {
+        assert!(service_action_call("caddy", "pause").is_err());
+    }
 }

@@ -34,6 +34,8 @@ import type { PackageRemoval } from "./api/types/PackageRemoval";
 import type { ServiceLimitsReport } from "./api/types/ServiceLimitsReport";
 import type { ResourceLimits } from "./api/types/ResourceLimits";
 import type { ServiceIdleSet } from "./api/types/ServiceIdleSet";
+import type { ServiceCreate } from "./api/types/ServiceCreate";
+import type { ServiceCreation } from "./api/types/ServiceCreation";
 import type { ServiceDelete } from "./api/types/ServiceDelete";
 import type { ServiceRemoval } from "./api/types/ServiceRemoval";
 import type { DatabaseCreate } from "./api/types/DatabaseCreate";
@@ -279,6 +281,11 @@ export function serviceIdle(service: string): Promise<unknown> {
 
 export function serviceSetIdle(params: ServiceIdleSet): Promise<unknown> {
   return invoke("mixengine_service_set_idle", { params });
+}
+
+/** `version` là bắt buộc — không có `service.resolve` nào chọn hộ, xem doc của `ServiceCreate`. */
+export function serviceCreate(params: ServiceCreate): Promise<ServiceCreation> {
+  return invoke<ServiceCreation>("mixengine_service_create", { params });
 }
 
 export function serviceDelete(params: ServiceDelete): Promise<ServiceRemoval> {

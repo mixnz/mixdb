@@ -1,18 +1,11 @@
 .overlay {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 40%);
+  composes: overlay from "../../../../components/Modal/surface.module.css";
 }
 
 .dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--surface, #fff);
-  border-radius: 8px;
+  composes: dialog from "../../../../components/Modal/surface.module.css";
   padding: 24px;
-  width: 460px;
+  width: min(460px, calc(100vw - 2rem));
   max-height: 80vh;
   overflow-y: auto;
 }

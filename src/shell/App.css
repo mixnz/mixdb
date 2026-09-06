@@ -137,6 +137,18 @@
   --danger-text: #c0392b;
   --danger-rgb: 211 47 47;
 
+  /* Hai màu còn lại của bộ "trạng thái", cùng hai dạng như `--danger`: một bản đặc cho viền và
+     icon, một bản đọc được trên nền trang cho chữ.
+
+     Chúng ra đời vì `.waiting` bên Dashboard đã viết `var(--warning, #b45309)` từ lâu — một token
+     app này chưa bao giờ định nghĩa, nên nó luôn rơi về mã cứng và không đổi theo theme. Đúng
+     loại lỗi `var(--surface, #fff)` đã để lại ở bốn dialog. Bản sáng của `--warning` giữ nguyên
+     đúng `#b45309` đó, nên không màn hình nào đổi màu vì lần thêm này. */
+  --success: #2e7d32;
+  --success-text: #1b5e20;
+  --warning: #b45309;
+  --warning-text: #92400e;
+
   /* All ten palettes stay defined whichever one is in force, rather than only the chosen one, so
      the swatches in Settings can each paint themselves from their own `--c-<name>` and show the
      whole set at once. Their dark casts sit with the rest of the dark theme at the foot of the
@@ -701,6 +713,11 @@ textarea:focus {
   --danger-text: #ff8a80;
   --danger-rgb: 255 99 99;
 
+  --success: #6bcf7f;
+  --success-text: #8ce09c;
+  --warning: #f0a54a;
+  --warning-text: #f5bd74;
+
   /* The dark cast of all ten. Only the palettes are restated — which one `--accent` points at was
      settled by `[data-accent]` above and holds through the theme, so a swatch and the accent both
      follow the theme without a second selector per colour. */
@@ -769,6 +786,11 @@ textarea:focus {
     --danger: #ff6b6b;
     --danger-text: #ff8a80;
     --danger-rgb: 255 99 99;
+
+    --success: #6bcf7f;
+    --success-text: #8ce09c;
+    --warning: #f0a54a;
+    --warning-text: #f5bd74;
 
     --c-blue: #6f9fd8;
     --c-blue-text: #8fb6e4;

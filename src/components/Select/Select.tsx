@@ -373,7 +373,12 @@ function Select<T extends string | number>({
         onClick={() => (open ? setOpen(false) : openMenu())}
         onKeyDown={onKeyDown}
       >
-        <span className={styles.value} style={{ textAlign: optionAlign }}>
+        {/* Chưa chọn gì thì chữ trên trigger phải đọc ra là một lời mời, không phải một giá trị:
+            cùng một chỗ, cùng một cỡ chữ, nên độ đậm là thứ duy nhất phân biệt được hai nghĩa. */}
+        <span
+          className={selected ? styles.value : `${styles.value} ${styles.placeholder}`}
+          style={{ textAlign: optionAlign }}
+        >
           {selected ? selected.label : placeholder ?? t("select.placeholder")}
         </span>
         {/* Sized above 1em because the shared icon grid leaves margin around the glyph it

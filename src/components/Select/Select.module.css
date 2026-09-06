@@ -76,6 +76,13 @@
   white-space: nowrap;
 }
 
+/* Chưa chọn gì. `opacity` chứ không phải một màu riêng: app không có token "chữ mờ" nào, và mọi
+   `.hint` trong app đã nói cùng điều này bằng đúng con số này — nên placeholder mờ đi giống hệt ở
+   cả theme sáng lẫn tối mà không cần một token thứ hai phải nuôi. */
+.placeholder {
+  opacity: 0.65;
+}
+
 /* `truncate={false}`. The floor goes, so a short value gets a narrow control instead of eight ems
    of empty box, and the ellipsis goes with it: the trigger is as wide as what it says, so there is
    nothing left for an ellipsis to stand for. The menu is not part of this — it shows its options

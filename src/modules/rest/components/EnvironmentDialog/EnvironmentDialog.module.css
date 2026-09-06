@@ -1,28 +1,14 @@
 .overlay {
-  composes: overlay from "../../../../components/dialogMotion.module.css";
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  background: rgba(0, 0, 0, 0.35);
+  composes: overlay from "../../../../components/Modal/surface.module.css";
+  --dialog-layer: 70;
 }
 
 .dialog {
-  composes: dialog from "../../../../components/dialogMotion.module.css";
-  position: fixed;
-  z-index: 71;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  composes: dialog from "../../../../components/Modal/surface.module.css";
+  --dialog-layer: 70;
   width: min(46rem, calc(100vw - 2rem));
   height: min(30rem, calc(100vh - 4rem));
-  background: var(--surface-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
   padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  text-align: left;
 }
 
 .header {

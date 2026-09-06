@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import Button from "../../../../components/Button";
@@ -11,8 +12,17 @@ import type { ExtensionOffer } from "../../api/types/ExtensionOffer";
 import type { ExtensionOrigin } from "../../api/types/ExtensionOrigin";
 import type { ExtensionSummary } from "../../api/types/ExtensionSummary";
 import StaleBadge from "../../components/StaleBadge";
+import { serviceStateKey } from "../../serviceStateLabel";
 import PlanDialog from "./PlanDialog";
 import styles from "./Extensions.module.css";
+
+/**
+ * Registry chào chính app này như một extension, và một trong các hàng đó **là** app đang chạy.
+ *
+ * Khớp theo `id`, không theo `kind`: `desktop-app` là một loại, không phải một danh tính, và một
+ * desktop app khác xuất hiện trong registry sau này thì không phải cái đang mở màn hình này.
+ */
+const SELF = "mixdb";
 
 /**
  * Registry, đã cài, cài (registry hoặc thư mục cục bộ), gỡ, bật/tắt một extension `kind: "service"`.
@@ -29,7 +39,15 @@ export default function Extensions() {
   const [installingSource, setInstallingSource] = useState<ExtensionOrigin | null>(null);
   const [uninstalling, setUninstalling] = useState<ExtensionSummary | null>(null);
   const [deleteData, setDeleteData] = useState(false);
+  /* Phiên bản app đang chạy, cho hàng `mixdb`. Registry nói phiên bản nó *xuất bản*, và với một
+     hàng là chính app này thì con số đó trả lời sai câu hỏi người đọc đang hỏi. `""` là chưa hỏi
+     xong — vài mili giây, và trong lúc đó hàng đó dùng con số của registry chứ không để trống. */
+  const [appVersion, setAppVersion] = useState("");
   const { t } = useTranslation();
+
+  useEffect(() => {
+    void getVersion().then(setAppVersion);
+  }, []);
 
   const reload = useCallback(async () => {
     try {
@@ -85,6 +103,26 @@ export default function Extensions() {
     }
   }
 
+
+  /** Trạng thái đã dịch; trạng thái lạ hiện nguyên văn daemon viết. Xem `serviceStateLabel.ts`. */
+  function stateLabel(state: string | null | undefined): string {
+    const key = serviceStateKey(state);
+    return key === null ? (state ?? "—") : t(key);
+  }
+
+  /* MixDB nằm ở "đã cài" **không phải vì API nói vậy** — daemon báo nó chưa cài, và câu đó đúng
+     theo nghĩa của daemon: nó chưa từng cài app này vào home nào cả. Nhưng người đang đọc màn hình
+     này đang chạy nó. Nên hàng đó dựng từ chính app: tên và loại lấy từ registry nếu registry có
+     nói, còn không thì lấy hằng số dưới đây; phiên bản luôn là phiên bản đang chạy.
+
+     Và nó **chỉ xuất hiện một lần**: lọc khỏi cả hai danh sách trước, rồi thêm lại đúng một chỗ. */
+  const selfOffer = available.find((offer) => offer.id === SELF);
+  const selfInstalled = installed.find((row) => row.id === SELF);
+  const otherInstalled = installed.filter((row) => row.id !== SELF);
+  const otherAvailable = available.filter((offer) => offer.id !== SELF);
+  const selfName = selfInstalled?.name ?? selfOffer?.name ?? "MixDB";
+  const selfKind = selfInstalled?.kind ?? selfOffer?.kind ?? "desktop-app";
+
   return (
     <div className={styles.extensions}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
@@ -107,12 +145,25 @@ export default function Extensions() {
           </tr>
         </thead>
         <tbody>
-          {installed.map((row) => (
+          <tr key={SELF}>
+            <td>{selfName}</td>
+            {/* Phiên bản đang chạy, không phải phiên bản registry xuất bản — hai số lệch nhau ngay
+                khi app tự cập nhật. Registry đứng chờ trong lúc `getVersion()` chưa trả lời. */}
+            <td>{appVersion || selfOffer?.version || "—"}</td>
+            <td>{selfKind}</td>
+            <td>—</td>
+            <td className={styles.rowActions}>
+              {/* Không có nút Gỡ: một app không tự gỡ chính nó từ bên trong nó được, và cập nhật
+                  đã có đường riêng ở Settings. */}
+              <span className={styles.installedBadge}>{t("mixengine.extensions.thisApp")}</span>
+            </td>
+          </tr>
+          {otherInstalled.map((row) => (
             <tr key={row.id}>
               <td>{row.name}</td>
               <td>{row.version}</td>
               <td>{row.kind}</td>
-              <td>{row.kind === "service" ? (serviceState[row.id] ?? "—") : "—"}</td>
+              <td>{row.kind === "service" ? stateLabel(serviceState[row.id]) : "—"}</td>
               <td className={styles.rowActions}>
                 {row.kind === "service" && (
                   <>
@@ -132,9 +183,6 @@ export default function Extensions() {
           ))}
         </tbody>
       </table>
-      {installed.length === 0 && (
-        <p className={styles.empty}>{t("mixengine.extensions.emptyInstalled")}</p>
-      )}
 
       <h4>
         {t("mixengine.extensions.registryTitle")} <StaleBadge stale={stale} />
@@ -144,7 +192,7 @@ export default function Extensions() {
       )}
       <table className={styles.table}>
         <tbody>
-          {available.map((offer) => (
+          {otherAvailable.map((offer) => (
             <tr key={offer.id}>
               <td>{offer.name}</td>
               <td>{offer.version}</td>

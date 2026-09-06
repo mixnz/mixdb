@@ -1,20 +1,11 @@
 .overlay {
-  composes: overlay from "../../../components/dialogMotion.module.css";
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  background: rgba(0, 0, 0, 0.35);
+  composes: overlay from "../../../components/Modal/surface.module.css";
+  --dialog-layer: 60;
 }
 
 .dialog {
-  composes: dialog from "../../../components/dialogMotion.module.css";
-  position: fixed;
-  z-index: 61;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
+  composes: dialog from "../../../components/Modal/surface.module.css";
+  --dialog-layer: 60;
   /* Wide enough for a tool's full path beside the list of panes — the path is the one thing here
      that cannot be shortened without hiding what the setting actually points at. */
   width: min(820px, calc(100vw - 2rem));
@@ -23,10 +14,6 @@
      move the list itself out from under it. Tall enough for the tools pane — both suites, their
      four tools and the paths under them — to be read without scrolling. */
   height: min(620px, calc(100vh - 3rem));
-  background: var(--surface-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
   /* The header, the list and the pane each pad themselves, so their dividing lines can run the
      full width of the dialog. */
   padding: 0;
