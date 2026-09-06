@@ -148,6 +148,33 @@ pub async fn mixengine_projects() -> Result<Value, AppError> {
     rpc::call("project.list", json!({})).await
 }
 
+/// Tra một project theo tên, kèm pin **hiệu lực** (file thắng row).
+#[tauri::command]
+pub async fn mixengine_project_show(name: String) -> Result<Value, AppError> {
+    rpc::call("project.show", json!({ "project": { "name": name } })).await
+}
+
+/// `params` đúng hình `ProjectCreate` từ frontend — không giải vào struct Rust riêng, cùng lý do
+/// `mixengine_site_create` đã theo (Pha 2 spec, mục 5).
+#[tauri::command]
+pub async fn mixengine_project_create(params: Value) -> Result<Value, AppError> {
+    rpc::call("project.create", params).await
+}
+
+/// `params` đúng hình `ProjectUpdate`. `pins` thay thế toàn bộ — frontend gửi lại mọi pin hiện có
+/// cộng thay đổi, không gửi mỗi pin mới.
+#[tauri::command]
+pub async fn mixengine_project_update(params: Value) -> Result<Value, AppError> {
+    rpc::call("project.update", params).await
+}
+
+/// Xoá đăng ký — thư mục và `mixengine.toml` được giữ nguyên (`ProjectRemoval.root_kept`/
+/// `manifest_kept`), UI phải nói rõ điều đó ở hộp thoại xác nhận.
+#[tauri::command]
+pub async fn mixengine_project_delete(name: String) -> Result<Value, AppError> {
+    rpc::call("project.delete", json!({ "project": { "name": name } })).await
+}
+
 /// `domain.dns_status` là cả `domain.list` lẫn chẩn đoán một tên — bỏ trống `domain` thấy mọi tên.
 #[tauri::command]
 pub async fn mixengine_domains(domain: Option<String>) -> Result<Value, AppError> {
@@ -182,4 +209,136 @@ pub async fn mixengine_ca_repair() -> Result<Value, AppError> {
 pub async fn mixengine_certs(domain: Option<String>) -> Result<Value, AppError> {
     let site = domain.map(|d| json!({ "domain": d }));
     rpc::call("cert.issue", json!({ "site": site })).await
+}
+
+/// `filter` đúng hình `RuntimeFilter` — bỏ trống (`{}`) thấy cả bốn kind.
+#[tauri::command]
+pub async fn mixengine_runtime_list_installed(filter: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.list_installed", filter).await
+}
+
+/// `filter` đúng hình `RuntimeFilter`. `RuntimeCatalogue.stale` phải được frontend vẽ ra, không bỏ
+/// qua — xem D3.
+#[tauri::command]
+pub async fn mixengine_runtime_list_available(filter: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.list_available", filter).await
+}
+
+/// `target` đúng hình `RuntimeTarget { kind, version }`. Trả `JobSummary` — id của nó là thứ frontend
+/// theo dõi qua stream `/events` đã mở sẵn.
+#[tauri::command]
+pub async fn mixengine_runtime_install(target: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.install", target).await
+}
+
+/// `params` đúng hình `RuntimeUninstall { kind, version, force? }`.
+#[tauri::command]
+pub async fn mixengine_runtime_uninstall(params: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.uninstall", params).await
+}
+
+/// `target` đúng hình `RuntimeTarget`.
+#[tauri::command]
+pub async fn mixengine_runtime_set_default(target: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.set_default", target).await
+}
+
+/// `target` đúng hình `RuntimeTarget` — một bản PHP, trả `RuntimeExtension[]`.
+#[tauri::command]
+pub async fn mixengine_runtime_list_extensions(target: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.list_extensions", target).await
+}
+
+/// `choice` đúng hình `ExtensionChoice { kind, version, name, enabled }`. Trả `ExtensionChange
+/// { extension, pool }` — `pool` là thứ frontend đọc để quyết định banner nào hiện.
+#[tauri::command]
+pub async fn mixengine_runtime_set_extension(choice: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.set_extension", choice).await
+}
+
+/// `filter` đúng hình `PackageFilter { package? }`.
+#[tauri::command]
+pub async fn mixengine_package_list(filter: Value) -> Result<Value, AppError> {
+    rpc::call("package.list", filter).await
+}
+
+/// `filter` đúng hình `PackageFilter`. `PackageCatalogue.stale` phải được vẽ, cùng component với
+/// `RuntimeCatalogue.stale` — D3.
+#[tauri::command]
+pub async fn mixengine_package_list_available(filter: Value) -> Result<Value, AppError> {
+    rpc::call("package.list_available", filter).await
+}
+
+/// `target` đúng hình `PackageTarget { package, version }`. Trả `JobSummary`, cùng cách theo dõi qua
+/// stream như `runtime.install`.
+#[tauri::command]
+pub async fn mixengine_package_install(target: Value) -> Result<Value, AppError> {
+    rpc::call("package.install", target).await
+}
+
+/// `target` đúng hình `PackageTarget`. **Không có `force`** — refuse vì `services` không rỗng là
+/// chốt, không có tham số nào vượt qua nó (D6).
+#[tauri::command]
+pub async fn mixengine_package_uninstall(target: Value) -> Result<Value, AppError> {
+    rpc::call("package.uninstall", target).await
+}
+
+/// `service` là `ServiceId` trần (một chuỗi).
+#[tauri::command]
+pub async fn mixengine_service_limits(service: String) -> Result<Value, AppError> {
+    rpc::call("service.limits", json!({ "service": service })).await
+}
+
+/// `params` đúng hình `ServiceLimitsSet { service, limits }` — `limits` phải là toàn bộ
+/// `ResourceLimits`, không phải một phần: gửi thiếu field nào là xoá field đó, đúng như
+/// `ServiceLimitsSet`'s doc đã ghi. Frontend chịu trách nhiệm gửi đủ.
+#[tauri::command]
+pub async fn mixengine_service_set_limits(params: Value) -> Result<Value, AppError> {
+    rpc::call("service.set_limits", params).await
+}
+
+/// Đọc chính sách idle hiện tại. **Chưa có type TypeScript đã vendor cho câu trả lời này** — xác
+/// nhận hình dạng thật khi chạy với daemon thật (Task 8).
+#[tauri::command]
+pub async fn mixengine_service_idle(service: String) -> Result<Value, AppError> {
+    rpc::call("service.idle", json!({ "service": service })).await
+}
+
+/// `params` đúng hình `ServiceIdleSet { service, minutes? }` — ba trạng thái: vắng mặt (theo
+/// recipe), `0` (tắt hẳn), `n` (n phút).
+#[tauri::command]
+pub async fn mixengine_service_set_idle(params: Value) -> Result<Value, AppError> {
+    rpc::call("service.set_idle", params).await
+}
+
+/// `params` đúng hình `DatabaseCreate { service, database, user? }`.
+#[tauri::command]
+pub async fn mixengine_database_create(params: Value) -> Result<Value, AppError> {
+    rpc::call("database.create", params).await
+}
+
+/// `service` là `ServiceId` trần. Đọc-only, không khởi động gì — dùng để vẽ affordance "Open" trước
+/// khi biết có bấm được không.
+#[tauri::command]
+pub async fn mixengine_database_client(service: String) -> Result<Value, AppError> {
+    rpc::call("database.client", json!({ "service": service })).await
+}
+
+/// Mở stream log của một service. Mở lại (một service khác, hay cùng service với `tail` khác) đóng
+/// cái đang mở — đúng luật `LogsState::keep` đã theo cho `MixEngineState`.
+#[tauri::command]
+pub async fn mixengine_logs_watch(
+    service: String,
+    tail: u32,
+    follow: bool,
+    on_line: Channel<String>,
+    state: State<'_, super::state::LogsState>,
+) -> Result<(), AppError> {
+    super::logs::stream_logs(service, tail, follow, on_line, &state).await
+}
+
+/// Đóng stream log đang mở. Gọi khi không có gì mở là vô hại.
+#[tauri::command]
+pub fn mixengine_logs_unwatch(state: State<'_, super::state::LogsState>) {
+    state.stop();
 }

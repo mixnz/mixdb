@@ -1,4 +1,4 @@
-.sites {
+.projects {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -12,8 +12,7 @@
 
 .toolbar {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-end;
 }
 
 .tableWrap {
@@ -24,7 +23,6 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  white-space: nowrap;
 }
 
 .table th,
@@ -34,17 +32,29 @@
   border-bottom: 1px solid var(--border);
 }
 
+.nameButton {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.rowActions {
+  display: flex;
+  gap: 8px;
+}
+
 .empty {
-  color: var(--text-muted);
+  opacity: 0.65;
+  padding: 16px;
+  text-align: center;
 }
 
-.readOnly {
-  opacity: 0.6;
-}
-
-.sharing {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
+.detailPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
 }

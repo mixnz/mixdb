@@ -3,10 +3,14 @@ import { describe, expect, it } from "vitest";
 import { parseMixEngineTabState } from "./tabState";
 
 describe("parseMixEngineTabState", () => {
-  it("accepts all three screens", () => {
+  it("accepts all seven screens", () => {
     expect(parseMixEngineTabState({ screen: "dashboard" })?.screen).toBe("dashboard");
+    expect(parseMixEngineTabState({ screen: "projects" })?.screen).toBe("projects");
     expect(parseMixEngineTabState({ screen: "sites" })?.screen).toBe("sites");
     expect(parseMixEngineTabState({ screen: "domains" })?.screen).toBe("domains");
+    expect(parseMixEngineTabState({ screen: "runtimes" })?.screen).toBe("runtimes");
+    expect(parseMixEngineTabState({ screen: "servicesDetail" })?.screen).toBe("servicesDetail");
+    expect(parseMixEngineTabState({ screen: "logs" })?.screen).toBe("logs");
   });
 
   it("rejects a fourth screen and garbage", () => {

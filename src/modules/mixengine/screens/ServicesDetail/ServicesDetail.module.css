@@ -1,0 +1,40 @@
+.screen {
+  display: flex;
+  height: 100%;
+}
+
+.list {
+  width: 200px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.row,
+.activeRow {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.activeRow {
+  background: rgb(var(--accent-rgb) / 0.12);
+  font-weight: 600;
+}
+
+.detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.empty {
+  opacity: 0.65;
+}

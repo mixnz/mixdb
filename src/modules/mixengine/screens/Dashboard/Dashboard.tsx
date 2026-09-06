@@ -106,8 +106,14 @@ export default function Dashboard() {
     void reload();
     api.watch((raw) => {
       // Một lô rỗng nghĩa là không còn gì chờ — đóng hộp thoại thay vì để nó đứng đó rỗng không.
+      // `elevation_required` mang cả số mới nhất: cập nhật `waiting` thẳng từ đây, không đợi một
+      // `reload()` khác — nếu không, nút "N thao tác đang chờ" đứng yên với số cũ sau khi Cho phép,
+      // vì bản thân sự kiện này chưa từng được xem là một lý do resync.
       const ops = pendingFrom(raw);
-      if (ops !== null) setPending(ops.length > 0 ? ops : null);
+      if (ops !== null) {
+        setPending(ops.length > 0 ? ops : null);
+        setWaiting(ops.length);
+      }
       setJobs((current) => applyJob(current, raw));
       // Sự kiện là best-effort: khi bus bên kia tràn hay kết nối đứt, đọc lại thay vì tin cái đang
       // có trên màn hình. Ngoài updater, vì updater chạy hai lần trong StrictMode.

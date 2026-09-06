@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import Button from "../../../../components/Button";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import Select from "../../../../components/Select";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
@@ -58,6 +59,8 @@ function SharingCell({
  */
 export default function Sites() {
   const [rows, setRows] = useState<SiteRow[]>([]);
+  const [projectNames, setProjectNames] = useState<string[]>([]);
+  const [projectFilter, setProjectFilter] = useState("");
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<SiteDetail | null>(null);
@@ -66,13 +69,17 @@ export default function Sites() {
 
   const reload = useCallback(async () => {
     try {
-      const list = await api.sites();
+      const list = await api.sites(projectFilter === "" ? undefined : projectFilter);
       setRows(list.sites);
       setError("");
     } catch (e) {
       setError(errorMessage(t, e));
     }
-  }, [t]);
+  }, [projectFilter, t]);
+
+  useEffect(() => {
+    void api.projects().then((list) => setProjectNames(list.projects.map((p) => p.name)));
+  }, []);
 
   useEffect(() => {
     void reload();
@@ -112,6 +119,14 @@ export default function Sites() {
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
 
       <div className={styles.toolbar}>
+        <Select
+          value={projectFilter}
+          onChange={setProjectFilter}
+          options={[
+            { value: "", label: t("mixengine.sites.filterAllProjects") },
+            ...projectNames.map((name) => ({ value: name, label: name })),
+          ]}
+        />
         <Button variant="primary" onClick={() => setCreating(true)}>
           {t("mixengine.sites.newSite")}
         </Button>

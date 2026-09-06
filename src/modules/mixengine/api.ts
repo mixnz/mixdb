@@ -11,6 +11,32 @@ import type { SiteShare } from "./api/types/SiteShare";
 import type { SiteSharing } from "./api/types/SiteSharing";
 import type { SiteUpdate } from "./api/types/SiteUpdate";
 import type { ProjectList } from "./api/types/ProjectList";
+import type { ProjectDetail } from "./api/types/ProjectDetail";
+import type { ProjectCreate } from "./api/types/ProjectCreate";
+import type { ProjectUpdate } from "./api/types/ProjectUpdate";
+import type { ProjectRemoval } from "./api/types/ProjectRemoval";
+import type { ProjectSummary } from "./api/types/ProjectSummary";
+import type { RuntimeKind } from "./api/types/RuntimeKind";
+import type { RuntimeList } from "./api/types/RuntimeList";
+import type { RuntimeCatalogue } from "./api/types/RuntimeCatalogue";
+import type { RuntimeTarget } from "./api/types/RuntimeTarget";
+import type { RuntimeUninstall } from "./api/types/RuntimeUninstall";
+import type { RuntimeRemoval } from "./api/types/RuntimeRemoval";
+import type { RuntimeSummary } from "./api/types/RuntimeSummary";
+import type { RuntimeExtension } from "./api/types/RuntimeExtension";
+import type { ExtensionChoice } from "./api/types/ExtensionChoice";
+import type { ExtensionChange } from "./api/types/ExtensionChange";
+import type { JobSummary } from "./api/types/JobSummary";
+import type { PackageList } from "./api/types/PackageList";
+import type { PackageCatalogue } from "./api/types/PackageCatalogue";
+import type { PackageTarget } from "./api/types/PackageTarget";
+import type { PackageRemoval } from "./api/types/PackageRemoval";
+import type { ServiceLimitsReport } from "./api/types/ServiceLimitsReport";
+import type { ResourceLimits } from "./api/types/ResourceLimits";
+import type { ServiceIdleSet } from "./api/types/ServiceIdleSet";
+import type { DatabaseCreate } from "./api/types/DatabaseCreate";
+import type { DatabaseAccount } from "./api/types/DatabaseAccount";
+import type { DatabaseClientReport } from "./api/types/DatabaseClientReport";
 import type { DomainStatusReport } from "./api/types/DomainStatusReport";
 import type { CaStatus } from "./api/types/CaStatus";
 import type { CertIssueReport } from "./api/types/CertIssueReport";
@@ -116,9 +142,27 @@ export function siteUnshare(domain: string): Promise<unknown> {
   return invoke("mixengine_site_unshare", { domain });
 }
 
-/** Chỉ để dựng dropdown project ở dialog tạo site — không phải một màn hình Projects. */
 export function projects(): Promise<ProjectList> {
   return invoke<ProjectList>("mixengine_projects");
+}
+
+/** Pin **hiệu lực** (file thắng row) kèm project — dùng cho cả trang chi tiết và form sửa. */
+export function projectShow(name: string): Promise<ProjectDetail> {
+  return invoke<ProjectDetail>("mixengine_project_show", { name });
+}
+
+export function projectCreate(input: ProjectCreate): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>("mixengine_project_create", { params: input });
+}
+
+/** `pins` thay thế toàn bộ — gửi lại mọi pin hiện có cộng thay đổi. */
+export function projectUpdate(input: ProjectUpdate): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>("mixengine_project_update", { params: input });
+}
+
+/** Thư mục và `mixengine.toml` được giữ nguyên — chỉ gỡ đăng ký. */
+export function projectDelete(name: string): Promise<ProjectRemoval> {
+  return invoke<ProjectRemoval>("mixengine_project_delete", { name });
 }
 
 /** `domain.dns_status` là cả liệt kê lẫn chẩn đoán một tên — bỏ trống `domain` thấy mọi tên. */
@@ -148,4 +192,105 @@ export function caRepair(): Promise<unknown> {
 /** Bỏ trống `domain` để cấp cho mọi site có khai HTTPS — cùng một call vẽ bảng lẫn cấp lại. */
 export function certs(domain?: string): Promise<CertIssueReport> {
   return invoke<CertIssueReport>("mixengine_certs", { domain });
+}
+
+export function runtimesInstalled(kind?: RuntimeKind): Promise<RuntimeList> {
+  return invoke<RuntimeList>("mixengine_runtime_list_installed", { filter: { kind } });
+}
+
+export function runtimesAvailable(kind?: RuntimeKind): Promise<RuntimeCatalogue> {
+  return invoke<RuntimeCatalogue>("mixengine_runtime_list_available", { filter: { kind } });
+}
+
+export function runtimeInstall(target: RuntimeTarget): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_runtime_install", { target });
+}
+
+export function runtimeUninstall(params: RuntimeUninstall): Promise<RuntimeRemoval> {
+  return invoke<RuntimeRemoval>("mixengine_runtime_uninstall", { params });
+}
+
+export function runtimeSetDefault(target: RuntimeTarget): Promise<RuntimeSummary> {
+  return invoke<RuntimeSummary>("mixengine_runtime_set_default", { target });
+}
+
+/** `runtime.list_extensions` trả một mảng trần theo bindings — không bọc trong `{ extensions: [] }`
+ *  như `service.list`/`runtime.list_installed` làm; xác nhận lại khi Task 8 chạy thật với daemon. */
+export function runtimeExtensions(target: RuntimeTarget): Promise<RuntimeExtension[]> {
+  return invoke<RuntimeExtension[]>("mixengine_runtime_list_extensions", { target });
+}
+
+export function runtimeSetExtension(choice: ExtensionChoice): Promise<ExtensionChange> {
+  return invoke<ExtensionChange>("mixengine_runtime_set_extension", { choice });
+}
+
+export function packagesInstalled(name?: string): Promise<PackageList> {
+  return invoke<PackageList>("mixengine_package_list", { filter: { package: name } });
+}
+
+export function packagesAvailable(name?: string): Promise<PackageCatalogue> {
+  return invoke<PackageCatalogue>("mixengine_package_list_available", { filter: { package: name } });
+}
+
+export function packageInstall(target: PackageTarget): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_package_install", { target });
+}
+
+export function packageUninstall(target: PackageTarget): Promise<PackageRemoval> {
+  return invoke<PackageRemoval>("mixengine_package_uninstall", { target });
+}
+
+export function serviceLimits(service: string): Promise<ServiceLimitsReport> {
+  return invoke<ServiceLimitsReport>("mixengine_service_limits", { service });
+}
+
+/** `ServiceLimitsSet` gửi toàn bộ ba field — không có patch. */
+export function serviceSetLimits(
+  service: string,
+  limits: ResourceLimits,
+): Promise<ServiceLimitsReport> {
+  return invoke<ServiceLimitsReport>("mixengine_service_set_limits", {
+    params: { service, limits },
+  });
+}
+
+/** Hình dạng câu trả lời chưa có type đã vendor — đọc như `unknown`, ép kiểu tại chỗ gọi sau khi
+ *  xác nhận với daemon thật (spec, Kiểm thử). */
+export function serviceIdle(service: string): Promise<unknown> {
+  return invoke("mixengine_service_idle", { service });
+}
+
+export function serviceSetIdle(params: ServiceIdleSet): Promise<unknown> {
+  return invoke("mixengine_service_set_idle", { params });
+}
+
+export function databaseCreate(input: DatabaseCreate): Promise<DatabaseAccount> {
+  return invoke<DatabaseAccount>("mixengine_database_create", { params: input });
+}
+
+export function databaseClient(service: string): Promise<DatabaseClientReport> {
+  return invoke<DatabaseClientReport>("mixengine_database_client", { service });
+}
+
+/** Không trả gì — thành công nghĩa là một tab `db` mới đã được xếp hàng mở, xem
+ *  `Handoff`/`crate::launch::request` phía Rust. */
+export function databaseOpenInMixDB(service: string, database?: string): Promise<void> {
+  return invoke("mixengine_database_open_in_mixdb", { service, database });
+}
+
+/** Mở stream log của một service. Cùng khuôn `watch`/`unwatch` — một `Channel` mới, người gọi tự
+ *  parse JSON thô. */
+export function logsWatch(
+  service: string,
+  tail: number,
+  follow: boolean,
+  onLine: (raw: string) => void,
+): Promise<void> {
+  const channel = new Channel<string>();
+  channel.onmessage = onLine;
+  return invoke("mixengine_logs_watch", { service, tail, follow, onLine: channel });
+}
+
+export function logsUnwatch(): Promise<void> {
+  return invoke("mixengine_logs_unwatch");
 }
