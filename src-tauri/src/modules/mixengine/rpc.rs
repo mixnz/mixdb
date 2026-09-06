@@ -194,6 +194,30 @@ mod tests {
         assert_eq!(error.params.get("code"), Some(&"internal".to_string()));
     }
 
+    /// Nói chuyện thật với một daemon đang chạy trên máy này.
+    ///
+    /// `#[ignore]` vì nó cần một MixEngine đã cài và đang chạy, thứ CI không có — chạy nó bằng
+    /// `cargo test --manifest-path src-tauri/Cargo.toml -- --ignored --nocapture`. Đây là bài duy
+    /// nhất chứng minh cả chuỗi: tên pipe suy ra đúng, chủ sở hữu khớp, HTTP/1.1 bắt tay được, và
+    /// JSON-RPC trả về thứ đọc được. Không test thuần nào thay được nó.
+    #[tokio::test]
+    #[ignore]
+    async fn a_live_daemon_answers_its_own_status() {
+        let address = super::super::transport::current_address().expect("an address");
+        println!("endpoint: {address}");
+
+        let status: Value = call("daemon.status", json!({})).await.expect("daemon.status");
+        println!("status: {status:#}");
+        assert!(status.get("version").and_then(Value::as_str).is_some(), "{status}");
+        assert!(status.get("home").and_then(Value::as_str).is_some(), "{status}");
+
+        // `service.list` trả `{ services: [...] }` — một object, không phải mảng trần. Đây chính
+        // là thứ chỉ một daemon thật nói ra, và là lý do frontend gõ kiểu theo `ServiceList`.
+        let services: Value = call("service.list", json!({})).await.expect("service.list");
+        println!("services: {services:#}");
+        assert!(services.get("services").is_some_and(Value::is_array), "{services}");
+    }
+
     /// Một answer thành công không phải một lỗi.
     #[test]
     fn a_result_is_not_an_error() {
