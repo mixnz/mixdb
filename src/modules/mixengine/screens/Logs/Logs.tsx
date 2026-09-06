@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
+import Button from "../../../../components/Button";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import Select from "../../../../components/Select";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
@@ -72,14 +74,18 @@ export default function Logs() {
         ) : (
           <>
             <div className={styles.toolbar}>
-              <select value={filter} onChange={(e) => setFilter(e.target.value as StreamFilter)}>
-                <option value="all">{t("mixengine.logs.streamAll")}</option>
-                <option value="stdout">{t("mixengine.logs.streamStdout")}</option>
-                <option value="stderr">{t("mixengine.logs.streamStderr")}</option>
-              </select>
-              <button onClick={() => setTail((current) => current * 2)}>
+              <Select
+                value={filter}
+                onChange={setFilter}
+                options={[
+                  { value: "all", label: t("mixengine.logs.streamAll") },
+                  { value: "stdout", label: t("mixengine.logs.streamStdout") },
+                  { value: "stderr", label: t("mixengine.logs.streamStderr") },
+                ]}
+              />
+              <Button onClick={() => setTail((current) => current * 2)}>
                 {t("mixengine.logs.loadMore")}
-              </button>
+              </Button>
             </div>
             <div className={styles.lines}>
               {visible.length === 0 && <p className={styles.empty}>{t("mixengine.logs.empty")}</p>}
