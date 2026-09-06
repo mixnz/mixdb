@@ -26,7 +26,7 @@ const ITEMS: readonly { screen: MixEngineScreen | null; labelKey: TranslationKey
   { screen: "servicesDetail", labelKey: "mixengine.sidebar.servicesDetail" },
   { screen: "logs", labelKey: "mixengine.sidebar.logs" },
   { screen: "blueprints", labelKey: "mixengine.sidebar.blueprints" },
-  { screen: null, labelKey: "mixengine.sidebar.extensions" },
+  { screen: "extensions", labelKey: "mixengine.sidebar.extensions" },
   { screen: null, labelKey: "mixengine.sidebar.settings" },
 ];
 
