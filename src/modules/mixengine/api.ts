@@ -31,6 +31,12 @@ import type { PackageList } from "./api/types/PackageList";
 import type { PackageCatalogue } from "./api/types/PackageCatalogue";
 import type { PackageTarget } from "./api/types/PackageTarget";
 import type { PackageRemoval } from "./api/types/PackageRemoval";
+import type { ServiceLimitsReport } from "./api/types/ServiceLimitsReport";
+import type { ResourceLimits } from "./api/types/ResourceLimits";
+import type { ServiceIdleSet } from "./api/types/ServiceIdleSet";
+import type { DatabaseCreate } from "./api/types/DatabaseCreate";
+import type { DatabaseAccount } from "./api/types/DatabaseAccount";
+import type { DatabaseClientReport } from "./api/types/DatabaseClientReport";
 import type { DomainStatusReport } from "./api/types/DomainStatusReport";
 import type { CaStatus } from "./api/types/CaStatus";
 import type { CertIssueReport } from "./api/types/CertIssueReport";
@@ -232,4 +238,42 @@ export function packageInstall(target: PackageTarget): Promise<JobSummary> {
 
 export function packageUninstall(target: PackageTarget): Promise<PackageRemoval> {
   return invoke<PackageRemoval>("mixengine_package_uninstall", { target });
+}
+
+export function serviceLimits(service: string): Promise<ServiceLimitsReport> {
+  return invoke<ServiceLimitsReport>("mixengine_service_limits", { service });
+}
+
+/** `ServiceLimitsSet` gửi toàn bộ ba field — không có patch. */
+export function serviceSetLimits(
+  service: string,
+  limits: ResourceLimits,
+): Promise<ServiceLimitsReport> {
+  return invoke<ServiceLimitsReport>("mixengine_service_set_limits", {
+    params: { service, limits },
+  });
+}
+
+/** Hình dạng câu trả lời chưa có type đã vendor — đọc như `unknown`, ép kiểu tại chỗ gọi sau khi
+ *  xác nhận với daemon thật (spec, Kiểm thử). */
+export function serviceIdle(service: string): Promise<unknown> {
+  return invoke("mixengine_service_idle", { service });
+}
+
+export function serviceSetIdle(params: ServiceIdleSet): Promise<unknown> {
+  return invoke("mixengine_service_set_idle", { params });
+}
+
+export function databaseCreate(input: DatabaseCreate): Promise<DatabaseAccount> {
+  return invoke<DatabaseAccount>("mixengine_database_create", { params: input });
+}
+
+export function databaseClient(service: string): Promise<DatabaseClientReport> {
+  return invoke<DatabaseClientReport>("mixengine_database_client", { service });
+}
+
+/** Không trả gì — thành công nghĩa là một tab `db` mới đã được xếp hàng mở, xem
+ *  `Handoff`/`crate::launch::request` phía Rust. */
+export function databaseOpenInMixDB(service: string, database?: string): Promise<void> {
+  return invoke("mixengine_database_open_in_mixdb", { service, database });
 }
