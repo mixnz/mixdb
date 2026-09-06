@@ -342,3 +342,39 @@ pub async fn mixengine_logs_watch(
 pub fn mixengine_logs_unwatch(state: State<'_, super::state::LogsState>) {
     state.stop();
 }
+
+/// `blueprint.list` — mọi blueprint home này giữ, theo thứ tự slug.
+#[tauri::command]
+pub async fn mixengine_blueprints() -> Result<Value, AppError> {
+    rpc::call("blueprint.list", json!({})).await
+}
+
+/// `params` đúng hình `BlueprintCapture { project: ProjectRef, name, description?, overwrite }`.
+#[tauri::command]
+pub async fn mixengine_blueprint_capture(params: Value) -> Result<Value, AppError> {
+    rpc::call("blueprint.capture", params).await
+}
+
+/// `params` đúng hình `BlueprintImport { path, signature?, name?, overwrite }`. Không bao giờ trả
+/// lỗi vì chữ ký sai — một chữ ký thiếu hoặc sai chỉ đổi `BlueprintSummary.trusted`/`signature` của
+/// kết quả, không chặn việc nhập.
+#[tauri::command]
+pub async fn mixengine_blueprint_import(params: Value) -> Result<Value, AppError> {
+    rpc::call("blueprint.import", params).await
+}
+
+/// `params` đúng hình `BlueprintApply { blueprint, project, root, dry_run, answers?, scaffold? }` —
+/// một method, gọi hai lượt: `dry_run: true` trả `{ outcome: "planned", plan }`, `dry_run: false` trả
+/// `{ outcome: "started", job }`.
+#[tauri::command]
+pub async fn mixengine_blueprint_apply(params: Value) -> Result<Value, AppError> {
+    rpc::call("blueprint.apply", params).await
+}
+
+/// `job.status` — chưa có command nào gọi tới namespace `job.*` trong file này trước đây. Cần đúng
+/// một lần: đọc `BlueprintApplied` sau khi job đã biến khỏi danh sách job đang chạy trên stream
+/// (`job_finished` xoá hàng, không giữ payload — xem `daemonState.applyJob`).
+#[tauri::command]
+pub async fn mixengine_job_status(job: i64) -> Result<Value, AppError> {
+    rpc::call("job.status", json!({ "job": job })).await
+}
