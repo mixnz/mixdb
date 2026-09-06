@@ -10,6 +10,7 @@ import type { SiteList } from "./api/types/SiteList";
 import type { SiteShare } from "./api/types/SiteShare";
 import type { SiteSharing } from "./api/types/SiteSharing";
 import type { SiteUpdate } from "./api/types/SiteUpdate";
+import type { ProjectList } from "./api/types/ProjectList";
 
 /**
  * Chỗ duy nhất module này gọi `invoke()`.
@@ -110,4 +111,9 @@ export function siteShare(input: SiteShare): Promise<SiteSharing> {
 
 export function siteUnshare(domain: string): Promise<unknown> {
   return invoke("mixengine_site_unshare", { domain });
+}
+
+/** Chỉ để dựng dropdown project ở dialog tạo site — không phải một màn hình Projects. */
+export function projects(): Promise<ProjectList> {
+  return invoke<ProjectList>("mixengine_projects");
 }

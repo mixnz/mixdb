@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 
+import Button from "../../../../components/Button";
 import ErrorBanner from "../../../../components/ErrorBanner";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
+import type { SiteDetail } from "../../api/types/SiteDetail";
 import { applySharingChange, canEditSite, type SiteRow } from "../../siteState";
+import SiteForm from "./SiteForm";
 import styles from "./Sites.module.css";
 
 /**
@@ -17,6 +20,8 @@ import styles from "./Sites.module.css";
 export default function Sites() {
   const [rows, setRows] = useState<SiteRow[]>([]);
   const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<SiteDetail | null>(null);
   const { t } = useTranslation();
 
   const reload = useCallback(async () => {
@@ -39,9 +44,23 @@ export default function Sites() {
     };
   }, [reload, t]);
 
+  async function edit(domain: string) {
+    try {
+      setEditing(await api.site(domain));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }
+
   return (
     <div className={styles.sites}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
+
+      <div className={styles.toolbar}>
+        <Button variant="primary" onClick={() => setCreating(true)}>
+          {t("mixengine.sites.newSite")}
+        </Button>
+      </div>
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -53,6 +72,7 @@ export default function Sites() {
               <th>{t("mixengine.sites.columnHttps")}</th>
               <th>{t("mixengine.sites.columnState")}</th>
               <th>{t("mixengine.sites.columnSharing")}</th>
+              <th>{t("mixengine.sites.columnActions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -80,6 +100,11 @@ export default function Sites() {
                       : t("mixengine.sites.sharingIndefinite")
                     : "—"}
                 </td>
+                <td>
+                  <Button onClick={() => void edit(row.domain)} disabled={!canEditSite(row.owner)}>
+                    {t("mixengine.sites.edit")}
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -87,6 +112,27 @@ export default function Sites() {
       </div>
 
       {rows.length === 0 && <p className={styles.empty}>{t("mixengine.sites.empty")}</p>}
+
+      {creating && (
+        <SiteForm
+          onCancel={() => setCreating(false)}
+          onSaved={() => {
+            setCreating(false);
+            void reload();
+          }}
+        />
+      )}
+
+      {editing && (
+        <SiteForm
+          initial={editing}
+          onCancel={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void reload();
+          }}
+        />
+      )}
     </div>
   );
 }

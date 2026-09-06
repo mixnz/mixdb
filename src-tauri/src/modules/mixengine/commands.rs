@@ -141,3 +141,9 @@ pub async fn mixengine_site_share(params: Value) -> Result<Value, AppError> {
 pub async fn mixengine_site_unshare(domain: String) -> Result<Value, AppError> {
     rpc::call("site.unshare", json!({ "site": { "domain": domain } })).await
 }
+
+/// Chỉ để dựng dropdown project ở dialog tạo site — không phải một màn hình Projects.
+#[tauri::command]
+pub async fn mixengine_projects() -> Result<Value, AppError> {
+    rpc::call("project.list", json!({})).await
+}
