@@ -7,6 +7,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { DomainStatus } from "../../api/types/DomainStatus";
 import AddDomainDialog from "./AddDomainDialog";
+import CaBlock from "./CaBlock";
 import styles from "./Domains.module.css";
 
 /**
@@ -48,6 +49,8 @@ export default function Domains() {
   return (
     <div className={styles.domains}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
+
+      <CaBlock onError={setError} />
 
       <div className={styles.toolbar}>
         <Button variant="primary" onClick={() => setAdding(true)}>
