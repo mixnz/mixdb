@@ -1,7 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 
 import type { DaemonStatus } from "./api/types/DaemonStatus";
-import type { ServiceSummary } from "./api/types/ServiceSummary";
+import type { ServiceList } from "./api/types/ServiceList";
 
 /**
  * Chỗ duy nhất module này gọi `invoke()`.
@@ -27,8 +27,10 @@ export function status(): Promise<DaemonStatus> {
   return invoke<DaemonStatus>("mixengine_status");
 }
 
-export function services(): Promise<ServiceSummary[]> {
-  return invoke<ServiceSummary[]>("mixengine_services");
+/** `service.list` trả `{ services: [...] }`, không phải một mảng trần — đo được trên daemon thật,
+ *  và `ServiceList` trong hợp đồng nói đúng như vậy. */
+export function services(): Promise<ServiceList> {
+  return invoke<ServiceList>("mixengine_services");
 }
 
 export type ServiceAction = "start" | "stop" | "restart";

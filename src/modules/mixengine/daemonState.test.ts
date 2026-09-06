@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { applyEvent, applyJob, type JobRow, type ServiceRow } from "./daemonState";
+import {
+  applyEvent,
+  applyJob,
+  needsResync,
+  type JobRow,
+  type ServiceRow,
+} from "./daemonState";
 
 const rows: ServiceRow[] = [
   { id: "mariadb@main", state: "running", port: 3306 },
@@ -92,5 +98,27 @@ describe("applyJob", () => {
     expect(applyJob(running, JSON.stringify({ type: "resync", missed: 2 }))).toEqual(running);
     expect(applyJob(running, "not json")).toEqual(running);
     expect(applyJob(running, JSON.stringify({ type: "job_progress" }))).toEqual(running);
+  });
+});
+
+describe("needsResync", () => {
+  /* Cùng câu trả lời với `applyEvent`, nhưng gọi được ngoài updater của `setState` — React chạy
+     updater hai lần trong StrictMode, nên một `reload()` đặt trong đó bắn hai lần mỗi sự kiện. */
+  it("says yes to exactly what applyEvent says yes to", () => {
+    for (const raw of [
+      JSON.stringify({ type: "resync", missed: 1 }),
+      JSON.stringify({ type: "mixdb_disconnected" }),
+    ]) {
+      expect(needsResync(raw)).toBe(true);
+      expect(applyEvent(rows, raw).resync).toBe(true);
+    }
+    for (const raw of [
+      JSON.stringify({ type: "service_state_changed", id: "caddy@main", to: "running" }),
+      JSON.stringify({ type: "quantum_flux" }),
+      "not json",
+    ]) {
+      expect(needsResync(raw)).toBe(false);
+      expect(applyEvent(rows, raw).resync).toBe(false);
+    }
   });
 });

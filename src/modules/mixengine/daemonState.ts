@@ -26,6 +26,22 @@ export function rowsFrom(list: ServiceSummary[]): ServiceRow[] {
 }
 
 /**
+ * Message này có nghĩa là "đừng tin cái đang có, đọc lại" không.
+ *
+ * Tách khỏi [`applyEvent`] vì câu trả lời chỉ phụ thuộc vào message, không phụ thuộc vào bảng — và
+ * vì gọi nó **ngoài** updater của `setState` là chỗ duy nhất đúng: React gọi updater hai lần trong
+ * StrictMode, nên một tác dụng phụ đặt trong đó sẽ chạy hai lần cho mỗi sự kiện.
+ */
+export function needsResync(raw: string): boolean {
+  try {
+    const { type } = JSON.parse(raw) as { type?: unknown };
+    return type === "resync" || type === "mixdb_disconnected";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Bảng sau một message.
  *
  * `resync` là `true` khi thứ vừa tới có nghĩa là "đừng tin cái đang có, đọc lại": bus bên kia tràn,
