@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { enforcementKind, enforcementReason } from "./limitsState";
-import type { Enforcement } from "./api/types/Enforcement";
 
 describe("enforcementKind", () => {
   it("reads hard as hard", () => {

@@ -5,13 +5,26 @@
  * truyền slot này qua mà không kiểm gì, nên `parseMixEngineTabState` là chỗ việc kiểm sống — xem
  * `docs/superpowers/specs/2026-08-23-tab-session-context-design.md`.
  */
-export type MixEngineScreen = "dashboard" | "projects" | "sites" | "domains" | "runtimes";
+export type MixEngineScreen =
+  | "dashboard"
+  | "projects"
+  | "sites"
+  | "domains"
+  | "runtimes"
+  | "servicesDetail";
 
 export interface MixEngineTabState {
   screen: MixEngineScreen;
 }
 
-const SCREENS: readonly MixEngineScreen[] = ["dashboard", "projects", "sites", "domains", "runtimes"];
+const SCREENS: readonly MixEngineScreen[] = [
+  "dashboard",
+  "projects",
+  "sites",
+  "domains",
+  "runtimes",
+  "servicesDetail",
+];
 
 /** Slot shell trả lại từ lần chạy trước, đã kiểm. `undefined` nghĩa là không dùng được. */
 export function parseMixEngineTabState(value: unknown): MixEngineTabState | undefined {

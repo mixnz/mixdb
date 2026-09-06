@@ -23,7 +23,7 @@ const ITEMS: readonly { screen: MixEngineScreen | null; labelKey: TranslationKey
   { screen: "sites", labelKey: "mixengine.sidebar.sites" },
   { screen: "domains", labelKey: "mixengine.sidebar.domains" },
   { screen: "runtimes", labelKey: "mixengine.sidebar.runtimes" },
-  { screen: null, labelKey: "mixengine.sidebar.servicesDetail" },
+  { screen: "servicesDetail", labelKey: "mixengine.sidebar.servicesDetail" },
   { screen: null, labelKey: "mixengine.sidebar.logs" },
   { screen: null, labelKey: "mixengine.sidebar.blueprints" },
   { screen: null, labelKey: "mixengine.sidebar.extensions" },
