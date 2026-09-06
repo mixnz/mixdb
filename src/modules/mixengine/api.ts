@@ -11,6 +11,9 @@ import type { SiteShare } from "./api/types/SiteShare";
 import type { SiteSharing } from "./api/types/SiteSharing";
 import type { SiteUpdate } from "./api/types/SiteUpdate";
 import type { ProjectList } from "./api/types/ProjectList";
+import type { DomainStatusReport } from "./api/types/DomainStatusReport";
+import type { CaStatus } from "./api/types/CaStatus";
+import type { CertIssueReport } from "./api/types/CertIssueReport";
 
 /**
  * Chỗ duy nhất module này gọi `invoke()`.
@@ -116,4 +119,33 @@ export function siteUnshare(domain: string): Promise<unknown> {
 /** Chỉ để dựng dropdown project ở dialog tạo site — không phải một màn hình Projects. */
 export function projects(): Promise<ProjectList> {
   return invoke<ProjectList>("mixengine_projects");
+}
+
+/** `domain.dns_status` là cả liệt kê lẫn chẩn đoán một tên — bỏ trống `domain` thấy mọi tên. */
+export function domains(domain?: string): Promise<DomainStatusReport> {
+  return invoke<DomainStatusReport>("mixengine_domains", { domain });
+}
+
+export function domainAdd(site: string, domain: string, acceptRiskyTld: boolean): Promise<unknown> {
+  return invoke("mixengine_domain_add", {
+    params: { site: { domain: site }, domain, accept_risky_tld: acceptRiskyTld },
+  });
+}
+
+export function domainRemove(domain: string): Promise<unknown> {
+  return invoke("mixengine_domain_remove", { domain });
+}
+
+/** Hai câu trả lời tin cậy, không phải một: `trust` là kho hệ thống, `browsers` là NSS database. */
+export function caStatus(): Promise<CaStatus> {
+  return invoke<CaStatus>("mixengine_ca_status");
+}
+
+export function caRepair(): Promise<unknown> {
+  return invoke("mixengine_ca_repair");
+}
+
+/** Bỏ trống `domain` để cấp cho mọi site có khai HTTPS — cùng một call vẽ bảng lẫn cấp lại. */
+export function certs(domain?: string): Promise<CertIssueReport> {
+  return invoke<CertIssueReport>("mixengine_certs", { domain });
 }
