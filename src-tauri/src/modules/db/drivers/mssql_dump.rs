@@ -195,11 +195,11 @@ pub async fn dump_structure(
         if schema == DEFAULT_SCHEMA {
             continue;
         }
-        write!(file, "{};\n", create_schema_statement(schema))
+        writeln!(file, "{};", create_schema_statement(schema))
             .map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
     }
     if schemas.iter().any(|s| s != DEFAULT_SCHEMA) {
-        write!(file, "\n").map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
+        writeln!(file).map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
     }
 
     for table in &tables {
@@ -232,15 +232,15 @@ pub async fn dump_structure(
             if let Some(stmt) =
                 comment_statement(&schema, &name, &column.name, &column.comment, false)
             {
-                write!(file, "{stmt};\n")
+                writeln!(file, "{stmt};")
                     .map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
             }
         }
         for index in &structure.indexes {
-            write!(file, "{};\n", dump_index_statement(&schema, &name, index))
+            writeln!(file, "{};", dump_index_statement(&schema, &name, index))
                 .map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
         }
-        write!(file, "\n").map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
+        writeln!(file).map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
 
         tracker.reached(&table.name);
         (watch.report)(tracker.progress());
@@ -438,7 +438,7 @@ async fn write_foreign_keys(
     write!(file, "-- Foreign keys\n\n")
         .map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
     for fk in &constraints {
-        write!(file, "{};\n", foreign_key_statement(fk))
+        writeln!(file, "{};", foreign_key_statement(fk))
             .map_err(|e| err!("error.cannotWriteFile", path = path, message = e))?;
     }
     Ok(())
