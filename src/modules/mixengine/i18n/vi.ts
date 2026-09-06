@@ -6,7 +6,7 @@ const vi: typeof en = {
     sidebar: {
       label: "Màn hình MixEngine",
       dashboard: "Dashboard",
-      projects: "Project",
+      projects: "Projects",
       sites: "Sites",
       domains: "Domains & TLS",
       runtimes: "Runtimes",
@@ -45,7 +45,6 @@ const vi: typeof en = {
       title: "MixEngine cần quyền quản trị",
       lead: "Mọi thứ dưới đây sẽ được đổi trong đúng một lần hỏi.",
       grant: "Cho phép",
-      drop: "Bỏ đi",
     },
     projects: {
       newProject: "Project mới",
@@ -165,6 +164,7 @@ const vi: typeof en = {
       sharingUntil: "chia sẻ LAN tới {{until}}",
       empty: "Chưa có site nào.",
       newSite: "+ Site mới",
+      filterAllProjects: "Mọi project",
       edit: "Sửa",
       form: {
         createTitle: "Site mới",

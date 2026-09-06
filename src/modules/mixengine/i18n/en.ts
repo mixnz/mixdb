@@ -47,7 +47,6 @@ export default {
       title: "MixEngine needs an administrator",
       lead: "Everything below will be changed in one prompt.",
       grant: "Allow",
-      drop: "Discard",
     },
     projects: {
       newProject: "New project",
@@ -167,6 +166,7 @@ export default {
       sharingUntil: "on the LAN until {{until}}",
       empty: "No sites yet.",
       newSite: "+ New site",
+      filterAllProjects: "All projects",
       edit: "Edit",
       form: {
         createTitle: "New site",
