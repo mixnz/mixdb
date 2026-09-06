@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import Button from "../../../../components/Button";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import Select from "../../../../components/Select";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
@@ -119,16 +120,15 @@ export default function LimitsPanel({ service }: { service: string }) {
 
       <label className={styles.field}>
         {t("mixengine.servicesDetail.limits.priority")}
-        <select
+        <Select
           value={priority}
           disabled={saving || !report.support.priority}
-          onChange={(e) => setPriority(e.target.value as "normal" | "background")}
-        >
-          <option value="normal">{t("mixengine.servicesDetail.limits.priorityNormal")}</option>
-          <option value="background">
-            {t("mixengine.servicesDetail.limits.priorityBackground")}
-          </option>
-        </select>
+          onChange={setPriority}
+          options={[
+            { value: "normal", label: t("mixengine.servicesDetail.limits.priorityNormal") },
+            { value: "background", label: t("mixengine.servicesDetail.limits.priorityBackground") },
+          ]}
+        />
       </label>
 
       {/* `watchdog: null` gộp hai trường hợp khác nhau (máy tự ép được, hoặc không khai memory_mb) —

@@ -5,6 +5,7 @@ import ErrorBanner from "../../../../components/ErrorBanner";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
+import styles from "./IdlePanel.module.css";
 
 type Choice = "recipe" | "never" | "minutes";
 
@@ -49,42 +50,47 @@ export default function IdlePanel({ service }: { service: string }) {
   }
 
   return (
-    <div>
+    <div className={styles.panel}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
       <h4>{t("mixengine.servicesDetail.idle.title")}</h4>
-      <label>
-        <input
-          type="radio"
-          checked={choice === "recipe"}
-          disabled={saving}
-          onChange={() => setChoice("recipe")}
-        />
-        {t("mixengine.servicesDetail.idle.useRecipe")}
-      </label>
-      <label>
-        <input
-          type="radio"
-          checked={choice === "never"}
-          disabled={saving}
-          onChange={() => setChoice("never")}
-        />
-        {t("mixengine.servicesDetail.idle.never")}
-      </label>
-      <label>
-        <input
-          type="radio"
-          checked={choice === "minutes"}
-          disabled={saving}
-          onChange={() => setChoice("minutes")}
-        />
-        {t("mixengine.servicesDetail.idle.afterMinutes")}
-        <input
-          type="number"
-          value={minutes}
-          disabled={saving || choice !== "minutes"}
-          onChange={(e) => setMinutes(e.target.value)}
-        />
-      </label>
+
+      <div className={styles.choices}>
+        <label className={styles.choice}>
+          <input
+            type="radio"
+            checked={choice === "recipe"}
+            disabled={saving}
+            onChange={() => setChoice("recipe")}
+          />
+          {t("mixengine.servicesDetail.idle.useRecipe")}
+        </label>
+        <label className={styles.choice}>
+          <input
+            type="radio"
+            checked={choice === "never"}
+            disabled={saving}
+            onChange={() => setChoice("never")}
+          />
+          {t("mixengine.servicesDetail.idle.never")}
+        </label>
+        <label className={styles.choice}>
+          <input
+            type="radio"
+            checked={choice === "minutes"}
+            disabled={saving}
+            onChange={() => setChoice("minutes")}
+          />
+          {t("mixengine.servicesDetail.idle.afterMinutes")}
+          <input
+            type="number"
+            className={styles.minutes}
+            value={minutes}
+            disabled={saving || choice !== "minutes"}
+            onChange={(e) => setMinutes(e.target.value)}
+          />
+        </label>
+      </div>
+
       <Button variant="primary" onClick={() => void save()} disabled={saving}>
         {t("mixengine.servicesDetail.idle.save")}
       </Button>
