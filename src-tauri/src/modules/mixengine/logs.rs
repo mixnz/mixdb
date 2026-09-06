@@ -1,6 +1,7 @@
-//! Giữ `GET /logs/service/{id}` mở và đẩy từng khung lên UI — mirror của `events.rs`, khác đúng
-//! route và state (`LogsState`, không phải `MixEngineState`). `Frames` (parser SSE) dùng chung,
-//! không viết lại.
+//! Giữ `GET /logs/{subject}/{id}` mở và đẩy từng khung lên UI — mirror của `events.rs`, khác đúng
+//! route và state (`LogsState`, không phải `MixEngineState`). `Frames` (parser SSE) dùng chung, không
+//! viết lại. `subject` là `"service"` hoặc `"job"` — hai kiểu duy nhất `LogSubject` (phía MixEngine)
+//! định nghĩa.
 
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
@@ -15,9 +16,14 @@ use super::sse::Frames;
 use super::state::LogsState;
 use super::transport::{self, Io};
 
-/// Mở `GET /logs/service/{id}?tail=N&follow=1` và chạy tới khi bị hủy hoặc kết nối đứt.
+/// Mở `GET /logs/{subject}/{id}?tail=N&follow=1` và chạy tới khi bị hủy hoặc kết nối đứt.
+///
+/// `subject` là `"service"` hoặc `"job"` — đúng hai đoạn route `LogSubject` (bindings đã vendor) nói
+/// tới, không có đoạn thứ ba. Route tự nói loại nào, nên không cần đoán một job id có phải tên
+/// service hay không.
 pub async fn stream_logs(
-    service: String,
+    subject: &str,
+    id: String,
     tail: u32,
     follow: bool,
     on_line: Channel<String>,
@@ -26,7 +32,7 @@ pub async fn stream_logs(
     let io = transport::connect().await?;
 
     let uri = format!(
-        "/logs/service/{service}?tail={tail}&follow={}",
+        "/logs/{subject}/{id}?tail={tail}&follow={}",
         if follow { 1 } else { 0 }
     );
     let request = Request::builder()

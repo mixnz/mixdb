@@ -334,7 +334,21 @@ pub async fn mixengine_logs_watch(
     on_line: Channel<String>,
     state: State<'_, super::state::LogsState>,
 ) -> Result<(), AppError> {
-    super::logs::stream_logs(service, tail, follow, on_line, &state).await
+    super::logs::stream_logs("service", service, tail, follow, on_line, &state).await
+}
+
+/// Output của một job (`GET /logs/job/{id}`) — cùng `LogsState`, cùng luật "mở lại đóng cái đang mở"
+/// service log đã theo. Dùng cho bước `run_scaffold` của `blueprint.apply`: đây là chỗ duy nhất
+/// output thật của lệnh scaffold lộ ra, `BlueprintApplied` (kết quả job) không mang nó.
+#[tauri::command]
+pub async fn mixengine_job_logs_watch(
+    job: i64,
+    tail: u32,
+    follow: bool,
+    on_line: Channel<String>,
+    state: State<'_, super::state::LogsState>,
+) -> Result<(), AppError> {
+    super::logs::stream_logs("job", job.to_string(), tail, follow, on_line, &state).await
 }
 
 /// Đóng stream log đang mở. Gọi khi không có gì mở là vô hại.

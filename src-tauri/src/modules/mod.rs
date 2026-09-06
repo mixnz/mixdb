@@ -248,6 +248,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_database_client,
         mixengine::open_in_mixdb::mixengine_database_open_in_mixdb,
         mixengine::commands::mixengine_logs_watch,
+        mixengine::commands::mixengine_job_logs_watch,
         mixengine::commands::mixengine_logs_unwatch,
         mixengine::commands::mixengine_domains,
         mixengine::commands::mixengine_domain_add,
