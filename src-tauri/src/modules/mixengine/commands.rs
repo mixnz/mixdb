@@ -334,11 +334,108 @@ pub async fn mixengine_logs_watch(
     on_line: Channel<String>,
     state: State<'_, super::state::LogsState>,
 ) -> Result<(), AppError> {
-    super::logs::stream_logs(service, tail, follow, on_line, &state).await
+    super::logs::stream_logs("service", service, tail, follow, on_line, &state).await
+}
+
+/// Output của một job (`GET /logs/job/{id}`) — cùng `LogsState`, cùng luật "mở lại đóng cái đang mở"
+/// service log đã theo. Dùng cho bước `run_scaffold` của `blueprint.apply`: đây là chỗ duy nhất
+/// output thật của lệnh scaffold lộ ra, `BlueprintApplied` (kết quả job) không mang nó.
+#[tauri::command]
+pub async fn mixengine_job_logs_watch(
+    job: i64,
+    tail: u32,
+    follow: bool,
+    on_line: Channel<String>,
+    state: State<'_, super::state::LogsState>,
+) -> Result<(), AppError> {
+    super::logs::stream_logs("job", job.to_string(), tail, follow, on_line, &state).await
 }
 
 /// Đóng stream log đang mở. Gọi khi không có gì mở là vô hại.
 #[tauri::command]
 pub fn mixengine_logs_unwatch(state: State<'_, super::state::LogsState>) {
     state.stop();
+}
+
+/// `blueprint.list` — mọi blueprint home này giữ, theo thứ tự slug.
+#[tauri::command]
+pub async fn mixengine_blueprints() -> Result<Value, AppError> {
+    rpc::call("blueprint.list", json!({})).await
+}
+
+/// `params` đúng hình `BlueprintCapture { project: ProjectRef, name, description?, overwrite }`.
+#[tauri::command]
+pub async fn mixengine_blueprint_capture(params: Value) -> Result<Value, AppError> {
+    rpc::call("blueprint.capture", params).await
+}
+
+/// `params` đúng hình `BlueprintImport { path, signature?, name?, overwrite }`. Không bao giờ trả
+/// lỗi vì chữ ký sai — một chữ ký thiếu hoặc sai chỉ đổi `BlueprintSummary.trusted`/`signature` của
+/// kết quả, không chặn việc nhập.
+#[tauri::command]
+pub async fn mixengine_blueprint_import(params: Value) -> Result<Value, AppError> {
+    rpc::call("blueprint.import", params).await
+}
+
+/// `params` đúng hình `BlueprintApply { blueprint, project, root, dry_run, answers?, scaffold? }` —
+/// một method, gọi hai lượt: `dry_run: true` trả `{ outcome: "planned", plan }`, `dry_run: false` trả
+/// `{ outcome: "started", job }`.
+#[tauri::command]
+pub async fn mixengine_blueprint_apply(params: Value) -> Result<Value, AppError> {
+    rpc::call("blueprint.apply", params).await
+}
+
+/// `job.status` — chưa có command nào gọi tới namespace `job.*` trong file này trước đây. Cần đúng
+/// một lần: đọc `BlueprintApplied` sau khi job đã biến khỏi danh sách job đang chạy trên stream
+/// (`job_finished` xoá hàng, không giữ payload — xem `daemonState.applyJob`).
+#[tauri::command]
+pub async fn mixengine_job_status(job: i64) -> Result<Value, AppError> {
+    rpc::call("job.status", json!({ "job": job })).await
+}
+
+/// `extension.list` — mọi extension home này đã cài. Tên Tauri command theo đúng khuôn
+/// `mixengine_runtime_list_installed`/`mixengine_package_list` đã dùng cho cặp installed/available.
+#[tauri::command]
+pub async fn mixengine_extension_list_installed() -> Result<Value, AppError> {
+    rpc::call("extension.list", json!({})).await
+}
+
+/// `extension.available` — registry publish gì, kèm `unreadable`/`stale`. **Không phải
+/// `extension.registry_list`** — tên đó không tồn tại, dù roadmap T4.4 ghi vậy.
+#[tauri::command]
+pub async fn mixengine_extension_list_available() -> Result<Value, AppError> {
+    rpc::call("extension.available", json!({})).await
+}
+
+/// `params` đúng hình `ExtensionPlanRequest { source: ExtensionOrigin }`. Đây là bước duy nhất trước
+/// khi cài — không gọi `extension.inspect` (Quyết định D2, spec).
+#[tauri::command]
+pub async fn mixengine_extension_plan(params: Value) -> Result<Value, AppError> {
+    rpc::call("extension.plan", params).await
+}
+
+/// `params` đúng hình `ExtensionInstall { source, consent }` — `consent` phải trích nguyên từ
+/// `ExtensionPlan` vừa nhận (Quyết định D3, spec), không phải build lại từ input người dùng.
+#[tauri::command]
+pub async fn mixengine_extension_install(params: Value) -> Result<Value, AppError> {
+    rpc::call("extension.install", params).await
+}
+
+/// `params` đúng hình `ExtensionUninstall { id, delete_data }`.
+#[tauri::command]
+pub async fn mixengine_extension_uninstall(params: Value) -> Result<Value, AppError> {
+    rpc::call("extension.uninstall", params).await
+}
+
+/// `id` là `ExtensionId` trần. Gọi qua `extension.*`, không phải `service.*` — hai namespace khác
+/// nhau dù giá trị id trùng nhau cho một extension kiểu `service` (spec, mục Extensions/Gỡ, Start,
+/// Stop).
+#[tauri::command]
+pub async fn mixengine_extension_start(id: String) -> Result<Value, AppError> {
+    rpc::call("extension.start", json!({ "id": id })).await
+}
+
+#[tauri::command]
+pub async fn mixengine_extension_stop(id: String) -> Result<Value, AppError> {
+    rpc::call("extension.stop", json!({ "id": id })).await
 }

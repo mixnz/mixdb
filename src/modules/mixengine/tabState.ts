@@ -12,7 +12,9 @@ export type MixEngineScreen =
   | "domains"
   | "runtimes"
   | "servicesDetail"
-  | "logs";
+  | "logs"
+  | "blueprints"
+  | "extensions";
 
 export interface MixEngineTabState {
   screen: MixEngineScreen;
@@ -26,6 +28,8 @@ const SCREENS: readonly MixEngineScreen[] = [
   "runtimes",
   "servicesDetail",
   "logs",
+  "blueprints",
+  "extensions",
 ];
 
 /** Slot shell trả lại từ lần chạy trước, đã kiểm. `undefined` nghĩa là không dùng được. */

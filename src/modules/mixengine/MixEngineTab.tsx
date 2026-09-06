@@ -7,8 +7,10 @@ import { useTranslation } from "../../i18n";
 import type { ModuleTabProps } from "../../shell/module";
 import * as api from "./api";
 import Sidebar from "./components/Sidebar";
+import Blueprints from "./screens/Blueprints";
 import Dashboard from "./screens/Dashboard";
 import Domains from "./screens/Domains";
+import Extensions from "./screens/Extensions";
 import Logs from "./screens/Logs";
 import Projects from "./screens/Projects";
 import Runtimes from "./screens/Runtimes";
@@ -116,6 +118,8 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
         {screen === "runtimes" && <Runtimes />}
         {screen === "servicesDetail" && <ServicesDetail />}
         {screen === "logs" && <Logs />}
+        {screen === "blueprints" && <Blueprints />}
+        {screen === "extensions" && <Extensions />}
       </div>
     </div>
   );
