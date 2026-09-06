@@ -134,10 +134,28 @@ fn sid_to_string(sid: windows_sys::Win32::Security::PSID) -> Option<String> {
     Some(owner)
 }
 
+/// Bao nhiêu lần thử lại khi pipe đang bận, và cách nhau bao lâu.
+///
+/// **Không phải phòng xa — đo được ngay lần đầu chạy với daemon thật.** Daemon giữ đúng một
+/// instance pipe chờ sẵn và chỉ dựng cái thay thế *sau khi* đã nhận một client, nên giữa hai lời
+/// gọi liên tiếp có một khe vài micro giây không có instance nào để mở và Windows trả
+/// `ERROR_PIPE_BUSY`. Với thiết kế một-kết-nối-một-call ở `rpc.rs`, khe đó bị dính liên tục: call
+/// thứ hai ngay sau call thứ nhất là hỏng.
+///
+/// Hai con số này là của chính MixEngine — `crates/mixengine-platform/src/windows/ipc.rs` dùng
+/// đúng chúng ở nửa bên kia, và bình luận ở đó nói rõ chúng rộng rãi hơn khe cần thiết vài bậc độ
+/// lớn: không tốn gì khi không có gì hỏng, và một giây là đủ ngắn để một daemon thật sự kẹt vẫn
+/// được báo nhanh.
+#[cfg(windows)]
+const BUSY_ATTEMPTS: u32 = 20;
+#[cfg(windows)]
+const BUSY_PAUSE: std::time::Duration = std::time::Duration::from_millis(50);
+
 /// Mở kết nối tới một địa chỉ đã biết.
 #[cfg(windows)]
 pub async fn dial(address: &str) -> Result<Io, AppError> {
     use tokio::net::windows::named_pipe::ClientOptions;
+    use windows_sys::Win32::Foundation::ERROR_PIPE_BUSY;
 
     // Owner được đọc **trước khi** mở: nếu một tài khoản khác đang giữ cái tên này thì không có
     // byte nào của ta được gửi đi cả.
@@ -151,13 +169,27 @@ pub async fn dial(address: &str) -> Result<Io, AppError> {
         ));
     }
 
-    let client = ClientOptions::new().open(address).map_err(|e| {
-        err!(
-            "error.mixengineUnreachable",
-            endpoint = address,
-            message = e
-        )
-    })?;
+    let mut attempts = 0;
+    let client = loop {
+        match ClientOptions::new().open(address) {
+            Ok(client) => break client,
+            // Bận là "daemon đang dựng instance thay thế", không phải "daemon không có ở đó".
+            Err(e)
+                if e.raw_os_error() == Some(ERROR_PIPE_BUSY as i32)
+                    && attempts < BUSY_ATTEMPTS =>
+            {
+                attempts += 1;
+                tokio::time::sleep(BUSY_PAUSE).await;
+            }
+            Err(e) => {
+                return Err(err!(
+                    "error.mixengineUnreachable",
+                    endpoint = address,
+                    message = e
+                ))
+            }
+        }
+    };
     Ok(Io::Pipe(client))
 }
 
