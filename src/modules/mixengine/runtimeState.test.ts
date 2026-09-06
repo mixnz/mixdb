@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatInstalledAt, jobFor, poolBanner, versionKey } from "./runtimeState";
+import { finishedJobId, formatInstalledAt, jobFor, poolBanner, versionKey } from "./runtimeState";
 import type { JobRow } from "./daemonState";
 
 describe("versionKey", () => {
@@ -43,5 +43,25 @@ describe("jobFor", () => {
 
   it("returns undefined once the job has finished and left the list", () => {
     expect(jobFor(jobs, 2)).toBeUndefined();
+  });
+});
+
+describe("finishedJobId", () => {
+  it("reads the job id off a job_finished message", () => {
+    expect(finishedJobId(JSON.stringify({ type: "job_finished", job: 7 }))).toBe(7);
+  });
+
+  it("returns null for a job_progress message", () => {
+    expect(
+      finishedJobId(JSON.stringify({ type: "job_progress", job: 7, percent: 40 })),
+    ).toBeNull();
+  });
+
+  it("returns null for an unrelated message", () => {
+    expect(finishedJobId(JSON.stringify({ type: "service_state_changed" }))).toBeNull();
+  });
+
+  it("returns null for invalid JSON", () => {
+    expect(finishedJobId("not json")).toBeNull();
   });
 });

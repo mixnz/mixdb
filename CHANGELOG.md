@@ -42,9 +42,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 
 ## [Unreleased]
 
+### Added
+
+- Services can now be deleted, not just started, stopped or restarted.
+
+### Changed
+
+- The Runtimes screen's "Services" tab is renamed "Software" and split into sub-tabs by function (web servers, databases, cache & queues) instead of one flat list, so it no longer shares a name with the sidebar's own Services screen.
+
 ### Fixed
 
 - The MixEngine install link opens the Vietnamese page when the app language is Vietnamese, instead of always English.
+- A runtime or package finishing its install now shows up in the installed list right away, instead of only after reopening the Runtimes tab.
+- The Software tab's available-versions table shows the release channel, matching the Languages tab.
+- Creating a project with "keep this project's services out of idle shutdown" checked no longer fails with a raw MixEngine error.
+- The "MixEngine needs an administrator" dialog no longer dumps a certificate's raw bytes for a CA-trust request; it now just says how many.
+- Spacing and layout-shift fixes in the Runtimes install-progress table and the Services/Logs empty-state message.
 
 ## [0.0.31] - 2026-09-06
 

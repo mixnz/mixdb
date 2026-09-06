@@ -78,7 +78,11 @@ const vi: typeof en = {
     },
     runtimes: {
       tabLanguages: "Ngôn ngữ",
-      tabPackages: "Dịch vụ",
+      tabPackages: "Phần mềm",
+      categoryWeb: "Máy chủ web",
+      categoryDatabase: "Cơ sở dữ liệu",
+      categoryCache: "Cache & hàng đợi",
+      categoryOther: "Khác",
       stale: "Danh sách có thể cũ",
       columnVersion: "Phiên bản",
       columnChannel: "Kênh",
@@ -102,6 +106,11 @@ const vi: typeof en = {
     },
     servicesDetail: {
       pickService: "Chọn một service",
+      delete: "Xoá service",
+      deleteTitle: "Xoá {{service}}?",
+      deleteMessage:
+        "Chỉ gỡ đăng ký và thư mục cấu hình sinh ra. Thư mục dữ liệu (nếu có) được giữ nguyên, không bị xoá.",
+      deleteForceConfirm: "Vẫn xoá",
       limits: {
         title: "Giới hạn",
         cpu: "CPU",

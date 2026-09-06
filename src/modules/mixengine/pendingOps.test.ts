@@ -56,6 +56,18 @@ describe("describeOp", () => {
     expect(describeOp(null).description).toBe("");
   });
 
+  /* `TrustPlan.der` là chứng chỉ DER trần — vài trăm số, mỗi số một dòng khi đổ nguyên qua
+     `JSON.stringify`. Hộp thoại phải nói kích thước, không đổ cả mảng ra màn hình. */
+  it("summarises a certificate's DER instead of dumping every byte", () => {
+    const der = Array.from({ length: 402 }, (_, i) => i % 256);
+    const described = describeOp({
+      id: 3,
+      op: { op: "trust-ca-install", plan: { method: "system-root", der } },
+    });
+    expect(described.detail).toBe("system-root\n402 bytes (DER)");
+    expect(described.detail).not.toContain("[");
+  });
+
   it("shows a plan or a target as it came", () => {
     const described = describeOp({ id: 2, op: { op: "port-access-grant", plan: { port: 443 } } });
     expect(described.detail).toContain("443");

@@ -28,6 +28,23 @@ export function jobFor(jobs: JobRow[], jobId: number | undefined): JobRow | unde
   return jobId === undefined ? undefined : jobs.find((job) => job.id === jobId);
 }
 
+/**
+ * `id` của job vừa xong, nếu message này là `job_finished` — ngược lại `null`.
+ *
+ * `applyJob` đã xoá job đó khỏi `JobRow[]`, nhưng chỉ xoá thôi không kéo một bản vừa cài xong ra
+ * khỏi bảng "có thể cài" — cái đó cần đọc lại `installed`/`available` từ daemon. Tách riêng khỏi
+ * `applyJob` vì đây là quyết định "có nên gọi lại API không", không phải state của bảng job.
+ */
+export function finishedJobId(raw: string): number | null {
+  try {
+    const { type, job } = JSON.parse(raw) as { type?: unknown; job?: unknown };
+    if (type === "job_finished" && typeof job === "number") return job;
+  } catch {
+    // Không phải JSON hợp lệ — không phải việc của hàm này báo lỗi đó.
+  }
+  return null;
+}
+
 /** `RuntimeSummary.installed_at`/`PackageSummary.installed_at` là mili giây epoch (`Timestamp`),
  *  không phải chuỗi — cùng cách `UpdateSection.tsx` đã vẽ `checked_at`: giờ theo múi giờ và định
  *  dạng của chính máy người dùng, không phải một chuẩn cố định. */

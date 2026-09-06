@@ -8,6 +8,9 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  /* Cùng lý do `Languages.module.css` đã theo: `job.message` đổi độ dài liên tục khi đang tải,
+     auto layout đo lại cột mỗi lần đổi và làm cả bảng co giãn theo. */
+  table-layout: fixed;
 }
 
 .table th,
@@ -21,6 +24,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .progress {
@@ -28,6 +32,8 @@
   align-items: center;
   gap: 8px;
   font-size: var(--text-sm);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .blockedHint {

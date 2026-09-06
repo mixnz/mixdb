@@ -38,3 +38,21 @@
 .empty {
   opacity: 0.65;
 }
+
+/* Cột giữa (`.list`) không có padding của riêng nó — chỉ hàng nào bấm được mới cần sát viền, còn
+   trạng thái rỗng phải giống hệt cột phải (`.detail` đã có `padding: 16px`). */
+.listEmpty {
+  padding: 16px;
+  opacity: 0.65;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.headerTitle {
+  margin: 0;
+}

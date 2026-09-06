@@ -74,8 +74,14 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
         });
         // `project.create` không có tham số `keep_warm` — đây là cách duy nhất áp nó ngay từ lúc
         // tạo. Bỏ qua khi vẫn đang tắt: mặc định phía daemon cho một project mới đã là tắt.
+        //
+        // `created.project.name`, không phải `created.name` — `project.create` trả `ProjectDetail
+        // { project, pins }`, không phải một `ProjectSummary` trần. Đọc nhầm tầng này gửi
+        // `project: { name: undefined }` xuống `project.update`, JSON bỏ luôn field rỗng, và
+        // daemon từ chối với "invalid value: map, expected map with a single key" — đúng lỗi đã
+        // báo.
         if (keepWarm) {
-          await api.projectUpdate({ project: { name: created.name }, keep_warm: true });
+          await api.projectUpdate({ project: { name: created.project.name }, keep_warm: true });
         }
       }
       onSaved();

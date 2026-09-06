@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import Button from "../../../../components/Button";
 import ErrorBanner from "../../../../components/ErrorBanner";
+import { Tab, TabStrip, tabKeyDown } from "../../../../components/TabStrip";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { PackageRelease } from "../../api/types/PackageRelease";
 import type { PackageSummary } from "../../api/types/PackageSummary";
 import { applyJob, type JobRow } from "../../daemonState";
-import { formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
+import { finishedJobId, formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
+import { PACKAGE_CATEGORY_ORDER, packageCategory, type PackageCategory } from "./packageCategories";
 import styles from "./Packages.module.css";
 
 export default function Packages() {
@@ -18,8 +20,42 @@ export default function Packages() {
   const [stale, setStale] = useState(false);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [installingJob, setInstallingJob] = useState<Record<string, number>>({});
+  const [category, setCategory] = useState<PackageCategory>("web");
   const [error, setError] = useState("");
   const { t } = useTranslation();
+
+  const categoryLabel: Record<PackageCategory, string> = {
+    web: t("mixengine.runtimes.categoryWeb"),
+    database: t("mixengine.runtimes.categoryDatabase"),
+    cache: t("mixengine.runtimes.categoryCache"),
+    other: t("mixengine.runtimes.categoryOther"),
+  };
+
+  // Tab nào có mặt phụ thuộc dữ liệu (không vẽ một tab luôn rỗng), nhưng thứ tự thì cố định —
+  // xem `PACKAGE_CATEGORY_ORDER`.
+  const categoriesPresent = PACKAGE_CATEGORY_ORDER.filter(
+    (cat) =>
+      installed.some((row) => packageCategory(row.package) === cat) ||
+      available.some((release) => packageCategory(release.package) === cat),
+  );
+
+  useEffect(() => {
+    if (categoriesPresent.length > 0 && !categoriesPresent.includes(category)) {
+      setCategory(categoriesPresent[0]);
+    }
+  }, [categoriesPresent, category]);
+
+  const installedInCategory = installed.filter((row) => packageCategory(row.package) === category);
+  const availableInCategory = available.filter(
+    (release) => packageCategory(release.package) === category,
+  );
+
+  // Cùng lý do `Languages.tsx` đã theo: đọc `installingJob` mới nhất trong callback `watch` đăng
+  // ký một lần, không đăng ký lại watch mỗi lần map đó đổi.
+  const installingJobRef = useRef(installingJob);
+  useEffect(() => {
+    installingJobRef.current = installingJob;
+  }, [installingJob]);
 
   const reload = useCallback(async () => {
     try {
@@ -37,6 +73,19 @@ export default function Packages() {
     void reload();
     api.watch((raw) => {
       setJobs((current) => applyJob(current, raw));
+      // Job đang theo dõi vừa xong: đọc lại "đã cài"/"có thể cài" — không có tin nào khác báo
+      // chuyện này, xem `Languages.tsx`.
+      const finishedId = finishedJobId(raw);
+      if (finishedId !== null && Object.values(installingJobRef.current).includes(finishedId)) {
+        void reload();
+        setInstallingJob((current) => {
+          const next = { ...current };
+          for (const key of Object.keys(next)) {
+            if (next[key] === finishedId) delete next[key];
+          }
+          return next;
+        });
+      }
     }).catch((e: unknown) => setError(errorMessage(t, e)));
     return () => {
       void api.unwatch();
@@ -71,6 +120,28 @@ export default function Packages() {
     <div className={styles.packages}>
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
 
+      {categoriesPresent.length > 1 && (
+        <TabStrip size="small" role="tablist">
+          {categoriesPresent.map((cat) => {
+            const active = cat === category;
+            const pick = () => setCategory(cat);
+            return (
+              <Tab
+                key={cat}
+                active={active}
+                role="tab"
+                aria-selected={active}
+                tabIndex={0}
+                onClick={pick}
+                onKeyDown={tabKeyDown(pick)}
+              >
+                {categoryLabel[cat]}
+              </Tab>
+            );
+          })}
+        </TabStrip>
+      )}
+
       <table className={styles.table}>
         <thead>
           <tr>
@@ -81,7 +152,7 @@ export default function Packages() {
           </tr>
         </thead>
         <tbody>
-          {installed.map((row) => {
+          {installedInCategory.map((row) => {
             const key = versionKey(row.package, row.version);
             return (
               <tr key={key}>
@@ -113,7 +184,7 @@ export default function Packages() {
       </h4>
       <table className={styles.table}>
         <tbody>
-          {available
+          {availableInCategory
             .filter((release) => !release.installed)
             .map((release) => {
               const key = versionKey(release.package, release.version);
@@ -123,6 +194,7 @@ export default function Packages() {
                   <td>
                     {release.package} {release.version}
                   </td>
+                  <td>{release.channel}</td>
                   <td className={styles.actions}>
                     {job ? (
                       <span className={styles.progress}>

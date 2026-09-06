@@ -67,3 +67,10 @@
 .empty {
   opacity: 0.65;
 }
+
+/* Cột giữa (`.list`) không có padding của riêng nó — trạng thái rỗng phải giống hệt cột phải
+   (`.viewer` đã có `padding: 16px`). */
+.listEmpty {
+  padding: 16px;
+  opacity: 0.65;
+}

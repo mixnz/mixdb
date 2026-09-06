@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 
 import Button from "../../../../components/Button";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
@@ -9,7 +9,7 @@ import * as api from "../../api";
 import type { RuntimeRelease } from "../../api/types/RuntimeRelease";
 import type { RuntimeSummary } from "../../api/types/RuntimeSummary";
 import { applyJob, type JobRow } from "../../daemonState";
-import { formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
+import { finishedJobId, formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import ExtensionsPanel from "./ExtensionsPanel";
 import styles from "./Languages.module.css";
@@ -25,6 +25,13 @@ export default function Languages() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [error, setError] = useState("");
   const { t } = useTranslation();
+
+  // Đọc được giá trị `installingJob` mới nhất từ trong callback `watch` đăng ký một lần — effect
+  // dưới không có `installingJob` trong deps (đăng ký lại watch mỗi lần map đó đổi là vô nghĩa).
+  const installingJobRef = useRef(installingJob);
+  useEffect(() => {
+    installingJobRef.current = installingJob;
+  }, [installingJob]);
 
   const reload = useCallback(async () => {
     try {
@@ -42,6 +49,20 @@ export default function Languages() {
     void reload();
     api.watch((raw) => {
       setJobs((current) => applyJob(current, raw));
+      // Job đang theo dõi vừa xong: bảng "đã cài" không tự biết bản mới trừ khi đọc lại — không
+      // có API nào khác báo tin này (T3, `daemonState.ts`: sự kiện không bao giờ là đường duy
+      // nhất, nhưng ở đây nó là đường *đầu tiên*, còn mở lại tab vẫn là đường dự phòng).
+      const finishedId = finishedJobId(raw);
+      if (finishedId !== null && Object.values(installingJobRef.current).includes(finishedId)) {
+        void reload();
+        setInstallingJob((current) => {
+          const next = { ...current };
+          for (const key of Object.keys(next)) {
+            if (next[key] === finishedId) delete next[key];
+          }
+          return next;
+        });
+      }
     }).catch((e: unknown) => setError(errorMessage(t, e)));
     return () => {
       void api.unwatch();

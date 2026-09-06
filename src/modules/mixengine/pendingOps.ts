@@ -64,6 +64,15 @@ export function describeOp(pending: unknown): DescribedOp {
     return { kind, description, detail: lines.join("\n") };
   }
 
+  // `TrustPlan.der` là chứng chỉ DER trần — vài trăm số, một dòng một số khi qua
+  // `JSON.stringify(..., null, 2)`. Chỉ nói kích thước, không đổ nguyên mảng.
+  if (kind === "trust-ca-install") {
+    const plan = op.plan as { method?: unknown; der?: unknown } | undefined;
+    const method = typeof plan?.method === "string" ? plan.method : "";
+    const bytes = Array.isArray(plan?.der) ? plan.der.length : 0;
+    return { kind, description, detail: [method, `${bytes} bytes (DER)`].filter(Boolean).join("\n") };
+  }
+
   // Mọi biến thể còn lại hiện nguyên hình dạng của nó. Một thao tác không có lời lẽ riêng vẫn phải
   // hiện ra: giấu nó đi là xin quyền cho một thứ người dùng không được xem.
   const extra = op.plan ?? op.target;

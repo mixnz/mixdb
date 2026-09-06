@@ -311,6 +311,14 @@ pub async fn mixengine_service_set_idle(params: Value) -> Result<Value, AppError
     rpc::call("service.set_idle", params).await
 }
 
+/// `params` đúng hình `ServiceDelete { service, force? }`. Trả `ServiceRemoval { removed,
+/// data_kept? }` — `force` chỉ vượt qua một site đang khai service này, không vượt qua một tiến
+/// trình đang chạy; thư mục dữ liệu không bao giờ bị xoá, chỉ được nêu tên nếu có.
+#[tauri::command]
+pub async fn mixengine_service_delete(params: Value) -> Result<Value, AppError> {
+    rpc::call("service.delete", params).await
+}
+
 /// `params` đúng hình `DatabaseCreate { service, database, user? }`.
 #[tauri::command]
 pub async fn mixengine_database_create(params: Value) -> Result<Value, AppError> {

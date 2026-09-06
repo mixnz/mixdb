@@ -34,6 +34,8 @@ import type { PackageRemoval } from "./api/types/PackageRemoval";
 import type { ServiceLimitsReport } from "./api/types/ServiceLimitsReport";
 import type { ResourceLimits } from "./api/types/ResourceLimits";
 import type { ServiceIdleSet } from "./api/types/ServiceIdleSet";
+import type { ServiceDelete } from "./api/types/ServiceDelete";
+import type { ServiceRemoval } from "./api/types/ServiceRemoval";
 import type { DatabaseCreate } from "./api/types/DatabaseCreate";
 import type { DatabaseAccount } from "./api/types/DatabaseAccount";
 import type { DatabaseClientReport } from "./api/types/DatabaseClientReport";
@@ -164,8 +166,10 @@ export function projectShow(name: string): Promise<ProjectDetail> {
   return invoke<ProjectDetail>("mixengine_project_show", { name });
 }
 
-export function projectCreate(input: ProjectCreate): Promise<ProjectSummary> {
-  return invoke<ProjectSummary>("mixengine_project_create", { params: input });
+/** `project.create` trả cả pin hiệu lực, đúng hình `ProjectDetail` — không phải `ProjectSummary`
+ *  trần. Gọi `.project` để lấy hàng vừa tạo (xem `ProjectForm.tsx`, chỗ đã đọc nhầm tầng này). */
+export function projectCreate(input: ProjectCreate): Promise<ProjectDetail> {
+  return invoke<ProjectDetail>("mixengine_project_create", { params: input });
 }
 
 /** `pins` thay thế toàn bộ — gửi lại mọi pin hiện có cộng thay đổi. */
@@ -275,6 +279,10 @@ export function serviceIdle(service: string): Promise<unknown> {
 
 export function serviceSetIdle(params: ServiceIdleSet): Promise<unknown> {
   return invoke("mixengine_service_set_idle", { params });
+}
+
+export function serviceDelete(params: ServiceDelete): Promise<ServiceRemoval> {
+  return invoke<ServiceRemoval>("mixengine_service_delete", { params });
 }
 
 export function databaseCreate(input: DatabaseCreate): Promise<DatabaseAccount> {

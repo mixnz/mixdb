@@ -80,7 +80,11 @@ export default {
     },
     runtimes: {
       tabLanguages: "Languages",
-      tabPackages: "Services",
+      tabPackages: "Software",
+      categoryWeb: "Web servers",
+      categoryDatabase: "Databases",
+      categoryCache: "Cache & queues",
+      categoryOther: "Other",
       stale: "This list may be out of date",
       columnVersion: "Version",
       columnChannel: "Channel",
@@ -104,6 +108,11 @@ export default {
     },
     servicesDetail: {
       pickService: "Pick a service",
+      delete: "Delete service",
+      deleteTitle: "Delete {{service}}?",
+      deleteMessage:
+        "Only the registration and the generated config directory are removed. Any data directory is left in place, untouched.",
+      deleteForceConfirm: "Delete anyway",
       limits: {
         title: "Limits",
         cpu: "CPU",

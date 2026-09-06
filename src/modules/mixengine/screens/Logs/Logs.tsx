@@ -65,7 +65,7 @@ export default function Logs() {
             {id}
           </button>
         ))}
-        {ids.length === 0 && <p className={styles.empty}>{t("mixengine.logs.pickService")}</p>}
+        {ids.length === 0 && <p className={styles.listEmpty}>{t("mixengine.logs.pickService")}</p>}
       </div>
 
       <div className={styles.viewer}>
