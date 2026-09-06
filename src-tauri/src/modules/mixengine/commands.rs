@@ -392,3 +392,50 @@ pub async fn mixengine_blueprint_apply(params: Value) -> Result<Value, AppError>
 pub async fn mixengine_job_status(job: i64) -> Result<Value, AppError> {
     rpc::call("job.status", json!({ "job": job })).await
 }
+
+/// `extension.list` — mọi extension home này đã cài. Tên Tauri command theo đúng khuôn
+/// `mixengine_runtime_list_installed`/`mixengine_package_list` đã dùng cho cặp installed/available.
+#[tauri::command]
+pub async fn mixengine_extension_list_installed() -> Result<Value, AppError> {
+    rpc::call("extension.list", json!({})).await
+}
+
+/// `extension.available` — registry publish gì, kèm `unreadable`/`stale`. **Không phải
+/// `extension.registry_list`** — tên đó không tồn tại, dù roadmap T4.4 ghi vậy.
+#[tauri::command]
+pub async fn mixengine_extension_list_available() -> Result<Value, AppError> {
+    rpc::call("extension.available", json!({})).await
+}
+
+/// `params` đúng hình `ExtensionPlanRequest { source: ExtensionOrigin }`. Đây là bước duy nhất trước
+/// khi cài — không gọi `extension.inspect` (Quyết định D2, spec).
+#[tauri::command]
+pub async fn mixengine_extension_plan(params: Value) -> Result<Value, AppError> {
+    rpc::call("extension.plan", params).await
+}
+
+/// `params` đúng hình `ExtensionInstall { source, consent }` — `consent` phải trích nguyên từ
+/// `ExtensionPlan` vừa nhận (Quyết định D3, spec), không phải build lại từ input người dùng.
+#[tauri::command]
+pub async fn mixengine_extension_install(params: Value) -> Result<Value, AppError> {
+    rpc::call("extension.install", params).await
+}
+
+/// `params` đúng hình `ExtensionUninstall { id, delete_data }`.
+#[tauri::command]
+pub async fn mixengine_extension_uninstall(params: Value) -> Result<Value, AppError> {
+    rpc::call("extension.uninstall", params).await
+}
+
+/// `id` là `ExtensionId` trần. Gọi qua `extension.*`, không phải `service.*` — hai namespace khác
+/// nhau dù giá trị id trùng nhau cho một extension kiểu `service` (spec, mục Extensions/Gỡ, Start,
+/// Stop).
+#[tauri::command]
+pub async fn mixengine_extension_start(id: String) -> Result<Value, AppError> {
+    rpc::call("extension.start", json!({ "id": id })).await
+}
+
+#[tauri::command]
+pub async fn mixengine_extension_stop(id: String) -> Result<Value, AppError> {
+    rpc::call("extension.stop", json!({ "id": id })).await
+}
