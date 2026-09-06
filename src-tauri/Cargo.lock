@@ -3445,6 +3445,9 @@ dependencies = [
  "chrono",
  "deadpool",
  "futures-util",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
  "keyring",
  "libc",
  "libsqlite3-sys",
@@ -3472,8 +3475,10 @@ dependencies = [
  "tiberius",
  "tokio",
  "tokio-util",
+ "toml 1.1.4+spec-1.1.0",
  "url",
  "uuid",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

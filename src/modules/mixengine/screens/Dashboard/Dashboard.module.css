@@ -1,0 +1,79 @@
+.dashboard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.home {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Bảng có thể rộng hơn pane; nó cuộn trong khung của nó chứ không đẩy cả trang. */
+.tableWrap {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.empty {
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Tiến độ vẽ ngay tại chỗ, không phủ spinner lên cả màn hình: một job đang chạy không làm phần
+   còn lại của bảng ngừng đọc được. */
+.jobs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jobs li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Trạng thái đang chuyển: nghiêng và mờ, để phân biệt với một trạng thái daemon đã xác nhận. */
+.pending {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Hổ phách: có việc cần người quyết, nhưng chưa có gì hỏng. */
+.waiting {
+  color: var(--warning, #b45309);
+}

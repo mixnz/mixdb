@@ -329,6 +329,17 @@ export function KeyboardIcon(props: IconProps) {
 
 /** A status marker rather than an action — currently the "unsaved changes" bullet. Filled, so
  * it reads as a dot at the small sizes it is used at instead of as a thin ring. */
+/** The MixEngine module in the `[+]` menu: a running machine, seen from the side — a block with
+ *  intake and exhaust, and one moving part at its centre. */
+export function EngineIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 9h3l2-3h6l2 3h3v6h-3l-2 3H9l-2-3H4z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </Icon>
+  );
+}
+
 export function DotIcon(props: IconProps) {
   return (
     <Icon {...props}>

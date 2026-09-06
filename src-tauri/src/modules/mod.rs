@@ -1,6 +1,7 @@
 //! The modules MixDB is made of. One folder each, and one block of the list below each.
 
 pub mod db;
+pub mod mixengine;
 pub mod rest;
 pub mod terminal;
 pub mod tools;
@@ -206,5 +207,16 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         terminal::commands::terminal_close,
         // ── tools ──
         tools::commands::tools_listening_ports,
+        // ── mixengine ──
+        mixengine::commands::mixengine_presence,
+        mixengine::commands::mixengine_start,
+        mixengine::commands::mixengine_status,
+        mixengine::commands::mixengine_services,
+        mixengine::commands::mixengine_service_action,
+        mixengine::commands::mixengine_watch,
+        mixengine::commands::mixengine_unwatch,
+        mixengine::commands::mixengine_elevation_status,
+        mixengine::commands::mixengine_elevation_grant,
+        mixengine::commands::mixengine_elevation_drop,
     ]
 }

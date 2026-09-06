@@ -1,0 +1,52 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 45%);
+  z-index: 10;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+  max-height: 80%;
+  padding: 20px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ops {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detail {
+  margin: 4px 0 0;
+  padding: 8px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  white-space: pre;
+  background: var(--surface-sunken, rgb(0 0 0 / 12%));
+  border-radius: 4px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.kind {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}

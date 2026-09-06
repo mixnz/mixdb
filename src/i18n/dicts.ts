@@ -2,6 +2,8 @@ import shared from "./en";
 import sharedVi from "./vi";
 import dbEn from "../modules/db/i18n/en";
 import dbVi from "../modules/db/i18n/vi";
+import mixengineEn from "../modules/mixengine/i18n/en";
+import mixengineVi from "../modules/mixengine/i18n/vi";
 import restEn from "../modules/rest/i18n/en";
 import restVi from "../modules/rest/i18n/vi";
 import terminalEn from "../modules/terminal/i18n/en";
@@ -25,12 +27,14 @@ import toolsVi from "../modules/tools/i18n/vi";
 export const EN = {
   ...shared,
   ...dbEn,
+  ...mixengineEn,
   ...restEn,
   ...terminalEn,
   ...toolsEn,
   error: {
     ...shared.error,
     ...dbEn.error,
+    ...mixengineEn.error,
     ...restEn.error,
     ...terminalEn.error,
     ...toolsEn.error,
@@ -40,12 +44,14 @@ export const EN = {
 export const VI = {
   ...sharedVi,
   ...dbVi,
+  ...mixengineVi,
   ...restVi,
   ...terminalVi,
   ...toolsVi,
   error: {
     ...sharedVi.error,
     ...dbVi.error,
+    ...mixengineVi.error,
     ...restVi.error,
     ...terminalVi.error,
     ...toolsVi.error,
