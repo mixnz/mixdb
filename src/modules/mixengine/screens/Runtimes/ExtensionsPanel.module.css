@@ -1,5 +1,5 @@
 .panel {
-  border-top: 1px solid var(--border, #ddd);
+  border-top: 1px solid var(--border);
   padding: 12px;
 }
 
@@ -21,6 +21,6 @@
 .banner {
   margin-top: 8px;
   padding: 8px;
-  border-radius: 4px;
-  background: var(--info-bg, #e7f3ff);
+  border-radius: var(--radius-sm);
+  background: rgb(var(--accent-rgb) / 0.12);
 }

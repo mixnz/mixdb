@@ -1,8 +1,13 @@
 .projects {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   padding: 16px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: auto;
 }
 
 .toolbar {
@@ -12,6 +17,7 @@
 
 .tableWrap {
   overflow-x: auto;
+  min-width: 0;
 }
 
 .table {
@@ -22,8 +28,8 @@
 .table th,
 .table td {
   text-align: left;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border, #ddd);
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .nameButton {
@@ -33,6 +39,7 @@
   color: inherit;
   text-decoration: underline;
   cursor: pointer;
+  font: inherit;
 }
 
 .rowActions {
@@ -41,13 +48,13 @@
 }
 
 .empty {
-  opacity: 0.7;
+  opacity: 0.65;
   padding: 16px;
   text-align: center;
 }
 
 .detailPanel {
-  border: 1px solid var(--border, #ddd);
-  border-radius: 8px;
-  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
 }

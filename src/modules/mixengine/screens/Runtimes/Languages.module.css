@@ -13,8 +13,8 @@
 .table th,
 .table td {
   text-align: left;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border, #ddd);
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--border);
 }
 
 .versionButton {
@@ -36,5 +36,5 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--text-sm);
 }

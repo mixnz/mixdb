@@ -7,7 +7,7 @@
 .tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid var(--border, #ddd);
+  border-bottom: 1px solid var(--border);
   padding: 0 16px;
 }
 
@@ -21,6 +21,6 @@
 }
 
 .activeTab {
-  border-bottom: 2px solid var(--accent, #0066ff);
+  border-bottom: 2px solid var(--accent);
   font-weight: 600;
 }
