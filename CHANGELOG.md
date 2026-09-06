@@ -42,6 +42,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 
 ## [Unreleased]
 
+## [0.0.32] - 2026-09-06
+
 ### Added
 
 - Services can now be created and deleted, not just started, stopped or restarted.
@@ -615,7 +617,8 @@ installs it and restarts. Every update is checked against MixDB's signing key fi
      links rather than decoration. `set-version.mjs` adds a line here as it cuts a section,
      so this stays in step without anyone remembering it. -->
 
-[Unreleased]: https://github.com/mixnz/mixdb/compare/v0.0.31...HEAD
+[Unreleased]: https://github.com/mixnz/mixdb/compare/v0.0.32...HEAD
+[0.0.32]: https://github.com/mixnz/mixdb/compare/v0.0.31...v0.0.32
 [0.0.31]: https://github.com/mixnz/mixdb/compare/v0.0.30...v0.0.31
 [0.0.30]: https://github.com/mixnz/mixdb/compare/v0.0.29...v0.0.30
 [0.0.29]: https://github.com/mixnz/mixdb/compare/v0.0.28...v0.0.29
