@@ -282,3 +282,44 @@ pub async fn mixengine_package_install(target: Value) -> Result<Value, AppError>
 pub async fn mixengine_package_uninstall(target: Value) -> Result<Value, AppError> {
     rpc::call("package.uninstall", target).await
 }
+
+/// `service` là `ServiceId` trần (một chuỗi).
+#[tauri::command]
+pub async fn mixengine_service_limits(service: String) -> Result<Value, AppError> {
+    rpc::call("service.limits", json!({ "service": service })).await
+}
+
+/// `params` đúng hình `ServiceLimitsSet { service, limits }` — `limits` phải là toàn bộ
+/// `ResourceLimits`, không phải một phần: gửi thiếu field nào là xoá field đó, đúng như
+/// `ServiceLimitsSet`'s doc đã ghi. Frontend chịu trách nhiệm gửi đủ.
+#[tauri::command]
+pub async fn mixengine_service_set_limits(params: Value) -> Result<Value, AppError> {
+    rpc::call("service.set_limits", params).await
+}
+
+/// Đọc chính sách idle hiện tại. **Chưa có type TypeScript đã vendor cho câu trả lời này** — xác
+/// nhận hình dạng thật khi chạy với daemon thật (Task 8).
+#[tauri::command]
+pub async fn mixengine_service_idle(service: String) -> Result<Value, AppError> {
+    rpc::call("service.idle", json!({ "service": service })).await
+}
+
+/// `params` đúng hình `ServiceIdleSet { service, minutes? }` — ba trạng thái: vắng mặt (theo
+/// recipe), `0` (tắt hẳn), `n` (n phút).
+#[tauri::command]
+pub async fn mixengine_service_set_idle(params: Value) -> Result<Value, AppError> {
+    rpc::call("service.set_idle", params).await
+}
+
+/// `params` đúng hình `DatabaseCreate { service, database, user? }`.
+#[tauri::command]
+pub async fn mixengine_database_create(params: Value) -> Result<Value, AppError> {
+    rpc::call("database.create", params).await
+}
+
+/// `service` là `ServiceId` trần. Đọc-only, không khởi động gì — dùng để vẽ affordance "Open" trước
+/// khi biết có bấm được không.
+#[tauri::command]
+pub async fn mixengine_database_client(service: String) -> Result<Value, AppError> {
+    rpc::call("database.client", json!({ "service": service })).await
+}
