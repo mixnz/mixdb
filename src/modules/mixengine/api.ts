@@ -11,6 +11,11 @@ import type { SiteShare } from "./api/types/SiteShare";
 import type { SiteSharing } from "./api/types/SiteSharing";
 import type { SiteUpdate } from "./api/types/SiteUpdate";
 import type { ProjectList } from "./api/types/ProjectList";
+import type { ProjectDetail } from "./api/types/ProjectDetail";
+import type { ProjectCreate } from "./api/types/ProjectCreate";
+import type { ProjectUpdate } from "./api/types/ProjectUpdate";
+import type { ProjectRemoval } from "./api/types/ProjectRemoval";
+import type { ProjectSummary } from "./api/types/ProjectSummary";
 import type { DomainStatusReport } from "./api/types/DomainStatusReport";
 import type { CaStatus } from "./api/types/CaStatus";
 import type { CertIssueReport } from "./api/types/CertIssueReport";
@@ -116,9 +121,27 @@ export function siteUnshare(domain: string): Promise<unknown> {
   return invoke("mixengine_site_unshare", { domain });
 }
 
-/** Chỉ để dựng dropdown project ở dialog tạo site — không phải một màn hình Projects. */
 export function projects(): Promise<ProjectList> {
   return invoke<ProjectList>("mixengine_projects");
+}
+
+/** Pin **hiệu lực** (file thắng row) kèm project — dùng cho cả trang chi tiết và form sửa. */
+export function projectShow(name: string): Promise<ProjectDetail> {
+  return invoke<ProjectDetail>("mixengine_project_show", { name });
+}
+
+export function projectCreate(input: ProjectCreate): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>("mixengine_project_create", { params: input });
+}
+
+/** `pins` thay thế toàn bộ — gửi lại mọi pin hiện có cộng thay đổi. */
+export function projectUpdate(input: ProjectUpdate): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>("mixengine_project_update", { params: input });
+}
+
+/** Thư mục và `mixengine.toml` được giữ nguyên — chỉ gỡ đăng ký. */
+export function projectDelete(name: string): Promise<ProjectRemoval> {
+  return invoke<ProjectRemoval>("mixengine_project_delete", { name });
 }
 
 /** `domain.dns_status` là cả liệt kê lẫn chẩn đoán một tên — bỏ trống `domain` thấy mọi tên. */
