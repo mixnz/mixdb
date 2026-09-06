@@ -17,7 +17,7 @@ use serde::Serialize;
 
 use crate::error::AppError;
 
-use super::{rpc, transport};
+use super::rpc;
 
 /// Tên trần của daemon, để `PATH` phân giải.
 const DAEMON: &str = "mixengined";
@@ -75,17 +75,24 @@ pub enum Presence {
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Daemon đang ở trạng thái nào.
+///
+/// **Đúng một lần dial.** Bản trước dial một lần chỉ để hỏi "có ai ở đó không", vứt kết nối đi, rồi
+/// dial lại cho `/health` — và trên Windows lần dial phí ấy ăn mất đúng cái instance pipe đang chờ,
+/// nên lần thứ hai gặp một daemon chưa kịp dựng cái thay thế. Kết quả là "daemon không trả lời" ở
+/// một máy daemon đang chạy bình thường. Câu hỏi "có ai ở đó không" đã nằm sẵn trong câu trả lời
+/// của `/health`, nên hỏi riêng nó không thêm gì ngoài một lỗi.
 pub async fn presence() -> Presence {
-    if transport::connect().await.is_err() {
-        return if installed().await {
-            Presence::NotRunning
-        } else {
-            Presence::NotInstalled
-        };
-    }
     match tokio::time::timeout(HEALTH_TIMEOUT, rpc::request("GET", "/health", None)).await {
         Ok(Ok(_)) => Presence::Running,
-        // Dial được nhưng không trả lời được: một daemon đang kẹt, không phải một daemon vắng mặt.
+        // Không tới được endpoint: chưa chạy, hoặc chưa cài. Đó là hai câu khác nhau.
+        Ok(Err(error)) if error.code == "error.mixengineUnreachable" => {
+            if installed().await {
+                Presence::NotRunning
+            } else {
+                Presence::NotInstalled
+            }
+        }
+        // Tới được nhưng không xong: một daemon đang kẹt, hoặc một pipe của tài khoản khác.
         _ => Presence::NotAnswering,
     }
 }

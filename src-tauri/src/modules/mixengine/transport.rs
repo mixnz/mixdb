@@ -9,6 +9,9 @@
 //! được giữa lúc lấy và lúc tra, còn owner được đóng dấu lúc tạo và không đặt thành một tài khoản
 //! mà người tạo không có.
 //!
+//! Kết nối được mở **trước** lần đọc đó và không byte nào được ghi lên nó cho tới khi owner đã
+//! khớp — lý do ở [`dial_once`]. Thứ một pipe của tài khoản lạ thu được vẫn là không có gì.
+//!
 //! Unix không cần: socket là file trong `run/` của chính tài khoản này, và không tài khoản khác
 //! đặt một cái vào đó để bị tìm thấy nhầm được.
 
@@ -154,43 +157,143 @@ const BUSY_PAUSE: std::time::Duration = std::time::Duration::from_millis(50);
 /// Mở kết nối tới một địa chỉ đã biết.
 #[cfg(windows)]
 pub async fn dial(address: &str) -> Result<Io, AppError> {
-    use tokio::net::windows::named_pipe::ClientOptions;
-    use windows_sys::Win32::Foundation::ERROR_PIPE_BUSY;
-
-    // Owner được đọc **trước khi** mở: nếu một tài khoản khác đang giữ cái tên này thì không có
-    // byte nào của ta được gửi đi cả.
-    let owner = pipe_owner(address)?;
-    let ours = current_sid()?;
-    if owner != ours {
-        return Err(err!(
-            "error.mixenginePipeOwner",
-            endpoint = address,
-            owner = owner
-        ));
-    }
-
     let mut attempts = 0;
-    let client = loop {
-        match ClientOptions::new().open(address) {
-            Ok(client) => break client,
-            // Bận là "daemon đang dựng instance thay thế", không phải "daemon không có ở đó".
-            Err(e)
-                if e.raw_os_error() == Some(ERROR_PIPE_BUSY as i32)
-                    && attempts < BUSY_ATTEMPTS =>
-            {
+    loop {
+        match dial_once(address) {
+            Ok(client) => return Ok(Io::Pipe(client)),
+            Err(Dial::Busy) if attempts < BUSY_ATTEMPTS => {
                 attempts += 1;
                 tokio::time::sleep(BUSY_PAUSE).await;
             }
-            Err(e) => {
+            Err(Dial::Busy) | Err(Dial::Absent) => {
                 return Err(err!(
                     "error.mixengineUnreachable",
                     endpoint = address,
-                    message = e
+                    message = "no pipe instance became free"
+                ))
+            }
+            Err(Dial::Stranger(owner)) => {
+                return Err(err!(
+                    "error.mixenginePipeOwner",
+                    endpoint = address,
+                    owner = owner
+                ))
+            }
+            Err(Dial::Failed(message)) => {
+                return Err(err!(
+                    "error.mixengineUnreachable",
+                    endpoint = address,
+                    message = message
                 ))
             }
         }
+    }
+}
+
+/// Vì sao một lần dial không thành.
+///
+/// `Busy` tách khỏi mọi thứ khác vì nó là cái duy nhất đáng thử lại: nó nghĩa là daemon vừa nhận
+/// một client và chưa kịp dựng instance thay thế, không phải daemon vắng mặt và không phải một
+/// tài khoản lạ.
+#[cfg(windows)]
+enum Dial {
+    Busy,
+    Absent,
+    Stranger(String),
+    Failed(String),
+}
+
+/// Một lần thử: mở đúng một lần, rồi đọc owner của chính handle vừa mở.
+///
+/// **Mở một lần, không phải hai.** Bản trước đọc owner bằng `GetNamedSecurityInfoW`, thứ nhận
+/// *tên* pipe — và mở một named pipe theo tên **chính là kết nối vào nó như một client**. Nên bước
+/// "chỉ đọc thôi" ấy ăn mất một instance, và mỗi lần dial cần hai instance trong khi daemon chỉ
+/// giữ một cái chờ sẵn. Hai bước tranh nhau đúng cái instance mà bước kia vừa lấy, retry không gỡ
+/// được vì mỗi vòng lại tiêu thêm một cái nữa, và app báo "MixEngine đã cài nhưng chưa chạy" ở một
+/// máy daemon đang chạy bình thường.
+///
+/// `GetSecurityInfo` nhận **handle**, nên nó đọc descriptor của kết nối đã có và không mở gì thêm.
+/// Tính chất bảo mật giữ nguyên: kết nối được mở nhưng **không byte nào được ghi** cho tới khi
+/// owner đã khớp — thứ một pipe của tài khoản lạ thu được vẫn là không có gì.
+#[cfg(windows)]
+fn dial_once(address: &str) -> Result<tokio::net::windows::named_pipe::NamedPipeClient, Dial> {
+    use tokio::net::windows::named_pipe::ClientOptions;
+    use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_PIPE_BUSY};
+
+    let client = ClientOptions::new().open(address).map_err(|e| {
+        match e.raw_os_error().map(|code| code as u32) {
+            Some(ERROR_PIPE_BUSY) => Dial::Busy,
+            Some(ERROR_FILE_NOT_FOUND) => Dial::Absent,
+            _ => Dial::Failed(e.to_string()),
+        }
+    })?;
+
+    let owner = handle_owner(&client)?;
+    let ours = current_sid().map_err(|e| Dial::Failed(e.to_string()))?;
+    if owner != ours {
+        // Thả kết nối trước khi trả lỗi: không có gì đã được ghi lên nó, và không có gì sẽ được.
+        drop(client);
+        return Err(Dial::Stranger(owner));
+    }
+    Ok(client)
+}
+
+// `advapi32!GetSecurityInfo` — bản nhận handle của `GetNamedSecurityInfoW`.
+//
+// Khai tay vì `windows-sys 0.59` không lộ hàm này ra (nó chỉ có `GetNamedSecurityInfoW` bản nhận
+// tên, và hai `GetSecurityInfo` của WinInet và WFP không liên quan gì). Ba tham số `ppsidGroup`,
+// `ppDacl` và `ppSacl` khai là con trỏ thuần vì chỗ này luôn truyền NULL cho chúng — ABI của một
+// con trỏ không đổi theo thứ nó trỏ tới.
+#[cfg(windows)]
+#[link(name = "advapi32")]
+extern "system" {
+    fn GetSecurityInfo(
+        handle: windows_sys::Win32::Foundation::HANDLE,
+        object_type: i32,
+        security_info: u32,
+        owner: *mut windows_sys::Win32::Security::PSID,
+        group: *mut core::ffi::c_void,
+        dacl: *mut core::ffi::c_void,
+        sacl: *mut core::ffi::c_void,
+        descriptor: *mut windows_sys::Win32::Security::PSECURITY_DESCRIPTOR,
+    ) -> u32;
+}
+
+/// SID của chủ sở hữu một kết nối pipe đang mở.
+#[cfg(windows)]
+fn handle_owner(
+    client: &tokio::net::windows::named_pipe::NamedPipeClient,
+) -> Result<String, Dial> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::LocalFree;
+    use windows_sys::Win32::Security::Authorization::SE_KERNEL_OBJECT;
+    use windows_sys::Win32::Security::{OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID};
+
+    let mut sid: PSID = std::ptr::null_mut();
+    let mut descriptor: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
+
+    // SAFETY: `client` còn sống suốt lời gọi nên handle của nó hợp lệ; ba tham số NULL là cách API
+    // này được bảo "không cần phần đó"; `descriptor` được `LocalFree` đúng một lần bên dưới.
+    let status = unsafe {
+        GetSecurityInfo(
+            client.as_raw_handle(),
+            SE_KERNEL_OBJECT,
+            OWNER_SECURITY_INFORMATION,
+            &mut sid,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            &mut descriptor,
+        )
     };
-    Ok(Io::Pipe(client))
+    if status != 0 {
+        return Err(Dial::Failed(format!("Windows error {status}")));
+    }
+
+    let owner = sid_to_string(sid);
+    // SAFETY: `descriptor` do `GetSecurityInfo` cấp phát và không dùng lại sau dòng này.
+    unsafe { LocalFree(descriptor) };
+    owner.ok_or_else(|| Dial::Failed("unreadable owner SID".to_string()))
 }
 
 /// Trên unix, socket là file trong `run/` của chính tài khoản này — không có cổng gác nào phải
@@ -205,64 +308,6 @@ pub async fn dial(address: &str) -> Result<Io, AppError> {
         )
     })?;
     Ok(Io::Socket(stream))
-}
-
-/// SID của chủ sở hữu đối tượng pipe.
-///
-/// Một pipe không tồn tại là `error.mixengineUnreachable`, không phải một vấn đề chủ sở hữu: cả
-/// hai đi qua đây, nhưng chúng là hai câu khác nhau với người đọc.
-#[cfg(windows)]
-fn pipe_owner(address: &str) -> Result<String, AppError> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Foundation::{LocalFree, ERROR_FILE_NOT_FOUND};
-    use windows_sys::Win32::Security::Authorization::{GetNamedSecurityInfoW, SE_FILE_OBJECT};
-    use windows_sys::Win32::Security::{OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID};
-
-    let wide: Vec<u16> = std::ffi::OsStr::new(address)
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect();
-
-    let mut sid: PSID = std::ptr::null_mut();
-    let mut descriptor: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
-
-    // SAFETY: `wide` kết thúc bằng NUL và sống hết lời gọi; hai con trỏ ra là chỗ để nhận, và
-    // `descriptor` được `LocalFree` đúng một lần bên dưới.
-    let status = unsafe {
-        GetNamedSecurityInfoW(
-            wide.as_ptr(),
-            SE_FILE_OBJECT,
-            OWNER_SECURITY_INFORMATION,
-            &mut sid,
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-            &mut descriptor,
-        )
-    };
-    if status != 0 {
-        // Không có gì ở địa chỉ đó là "daemon chưa chạy", không phải "pipe của người khác".
-        let code = if status == ERROR_FILE_NOT_FOUND {
-            "error.mixengineUnreachable"
-        } else {
-            "error.mixenginePipeOwner"
-        };
-        return Err(crate::error::AppError::new(code)
-            .with("endpoint", address)
-            .with("owner", format!("Windows error {status}"))
-            .with("message", format!("Windows error {status}")));
-    }
-
-    let owner = sid_to_string(sid);
-    // SAFETY: `descriptor` do `GetNamedSecurityInfoW` cấp phát và không dùng lại sau dòng này.
-    unsafe { LocalFree(descriptor) };
-    owner.ok_or_else(|| {
-        err!(
-            "error.mixenginePipeOwner",
-            endpoint = address,
-            owner = "unreadable"
-        )
-    })
 }
 
 #[cfg(test)]
