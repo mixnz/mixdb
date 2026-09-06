@@ -143,6 +143,15 @@ export default {
         secretLine: "Password stored in your credential store as {{key}}.",
       },
     },
+    logs: {
+      pickService: "Pick a service",
+      streamAll: "All",
+      streamStdout: "stdout",
+      streamStderr: "stderr",
+      loadMore: "Load more history",
+      gap: "— {{count}} lines skipped —",
+      empty: "No output yet.",
+    },
     sites: {
       columnDomain: "Domain",
       columnOwner: "Owner",

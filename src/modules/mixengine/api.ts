@@ -277,3 +277,20 @@ export function databaseClient(service: string): Promise<DatabaseClientReport> {
 export function databaseOpenInMixDB(service: string, database?: string): Promise<void> {
   return invoke("mixengine_database_open_in_mixdb", { service, database });
 }
+
+/** Mở stream log của một service. Cùng khuôn `watch`/`unwatch` — một `Channel` mới, người gọi tự
+ *  parse JSON thô. */
+export function logsWatch(
+  service: string,
+  tail: number,
+  follow: boolean,
+  onLine: (raw: string) => void,
+): Promise<void> {
+  const channel = new Channel<string>();
+  channel.onmessage = onLine;
+  return invoke("mixengine_logs_watch", { service, tail, follow, onLine: channel });
+}
+
+export function logsUnwatch(): Promise<void> {
+  return invoke("mixengine_logs_unwatch");
+}

@@ -141,6 +141,15 @@ const vi: typeof en = {
         secretLine: "Mật khẩu lưu trong credential store dưới tên {{key}}.",
       },
     },
+    logs: {
+      pickService: "Chọn một service",
+      streamAll: "Tất cả",
+      streamStdout: "stdout",
+      streamStderr: "stderr",
+      loadMore: "Xem thêm phía trên",
+      gap: "— bỏ qua {{count}} dòng —",
+      empty: "Chưa có gì được in ra.",
+    },
     sites: {
       columnDomain: "Domain",
       columnOwner: "Chủ sở hữu",
