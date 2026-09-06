@@ -1,8 +1,8 @@
 {
   "name": "mixdb",
   "private": true,
-  "license": "GPL-3.0-or-later",
-  "version": "0.0.30",
+  "license": "MIT OR Apache-2.0",
+  "version": "0.0.31",
   "engines": {
     "node": ">=20"
   },

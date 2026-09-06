@@ -18,7 +18,7 @@ Các loại database đều có workspace riêng:
 
 ## Tính năng
 
-Phiên bản mới nhất: **0.0.30** (2026-09-05). Phần dưới mô tả app hiện làm được những gì —
+Phiên bản mới nhất: **0.0.31** (2026-09-06). Phần dưới mô tả app hiện làm được những gì —
 *không* phải danh sách thay đổi: **cái gì đổi ở bản nào thì đọc [CHANGELOG.md](CHANGELOG.md)**,
 nơi duy nhất ghi điều đó.
 
@@ -140,7 +140,6 @@ Bản đầy đủ — kể cả đường dẫn tới nơi app lưu dữ liệu
 
 Copyright © 2026 mixnz (Nguyễn Hải Quang).
 
-MixDB phát hành theo [GNU General Public License v3.0 hoặc mới hơn](LICENSE). Bạn được tự do dùng,
-sửa và phân phối lại — với điều kiện bản phân phối lại cũng kèm mã nguồn và cũng theo GPL.
-
-Một giấy phép duy nhất cho toàn bộ dự án, không có bản thương mại song song.
+MixDB phát hành song song theo hai giấy phép, bạn chọn một trong hai:
+[Apache License 2.0](LICENSE-APACHE) hoặc [MIT License](LICENSE-MIT). Bạn được tự do dùng, sửa,
+phân phối lại, kể cả trong phần mềm đóng nguồn, miễn giữ lại thông báo bản quyền.

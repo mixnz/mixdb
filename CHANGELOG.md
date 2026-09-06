@@ -42,6 +42,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 
 ## [Unreleased]
 
+## [0.0.31] - 2026-09-06
+
 ### Added
 
 - A MixEngine tab: see the local daemon and the services it supervises, and start, stop or restart
@@ -58,6 +60,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - The connection form uses the full width of the pane. The fields keep the width they had; the
   database-kind row is the one that spreads, and scrolls sideways — fading at whichever end still
   has kinds behind it — instead of being cut off.
+- MixDB is now dual-licensed under Apache-2.0 or MIT, instead of GPL-3.0-or-later.
 
 ## [0.0.30] - 2026-09-05
 
@@ -590,7 +593,8 @@ installs it and restarts. Every update is checked against MixDB's signing key fi
      links rather than decoration. `set-version.mjs` adds a line here as it cuts a section,
      so this stays in step without anyone remembering it. -->
 
-[Unreleased]: https://github.com/mixnz/mixdb/compare/v0.0.30...HEAD
+[Unreleased]: https://github.com/mixnz/mixdb/compare/v0.0.31...HEAD
+[0.0.31]: https://github.com/mixnz/mixdb/compare/v0.0.30...v0.0.31
 [0.0.30]: https://github.com/mixnz/mixdb/compare/v0.0.29...v0.0.30
 [0.0.29]: https://github.com/mixnz/mixdb/compare/v0.0.28...v0.0.29
 [0.0.28]: https://github.com/mixnz/mixdb/compare/v0.0.27...v0.0.28
