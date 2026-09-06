@@ -13,7 +13,7 @@ import styles from "./Blueprints.module.css";
 
 /** Danh sách blueprint của home này — capture, nhập, apply. Không có sửa/xoá (`blueprint.delete`
  *  không tồn tại) — overwrite lúc capture/nhập là đường duy nhất thay một slug. */
-export default function Blueprints() {
+export default function Blueprints({ active }: { active: boolean }) {
   const [rows, setRows] = useState<BlueprintSummary[]>([]);
   const [error, setError] = useState("");
   const [capturing, setCapturing] = useState(false);
@@ -31,9 +31,10 @@ export default function Blueprints() {
     }
   }, [t]);
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (active) void reload();
+  }, [active, reload]);
 
   function sourceLabel(row: BlueprintSummary): string {
     if (row.source === "builtin") return t("mixengine.blueprints.sourceBuiltin");

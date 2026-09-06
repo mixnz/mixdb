@@ -13,7 +13,7 @@ import IdlePanel from "./IdlePanel";
 import LimitsPanel from "./LimitsPanel";
 import styles from "./ServicesDetail.module.css";
 
-export default function ServicesDetail() {
+export default function ServicesDetail({ active }: { active: boolean }) {
   const [ids, setIds] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -33,9 +33,13 @@ export default function ServicesDetail() {
     }
   }, [t]);
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cài/gỡ một runtime (một bản PHP chẳng
+  // hạn) không sinh sự kiện gì cho màn này biết, và màn giữ mount qua lần đổi màn nên không còn
+  // được "remount = đọc lại mới" miễn phí như trước; quay lại tab là đường dự phòng, xem
+  // `Dashboard.tsx`.
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (active) void reload();
+  }, [active, reload]);
 
   /* Chọn luôn service vừa tạo: người vừa dựng nó là người sắp đặt limits/idle cho nó. */
   function created(creation: ServiceCreation) {

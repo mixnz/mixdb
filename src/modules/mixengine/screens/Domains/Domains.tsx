@@ -18,7 +18,7 @@ import styles from "./Domains.module.css";
  * `resolves_to` mỗi cái trả lời một câu hỏi khác nhau; `because` là câu duy nhất nói cái gì sai,
  * vẽ nguyên văn — không dịch, vì đó là câu daemon tự viết.
  */
-export default function Domains() {
+export default function Domains({ active }: { active: boolean }) {
   const [rows, setRows] = useState<DomainStatus[]>([]);
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
@@ -34,9 +34,10 @@ export default function Domains() {
     }
   }, [t]);
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (active) void reload();
+  }, [active, reload]);
 
   async function remove(domain: string) {
     try {

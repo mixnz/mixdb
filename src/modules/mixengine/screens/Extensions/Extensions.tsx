@@ -29,7 +29,7 @@ const SELF = "mixdb";
  *
  * Không có màn hình "cấu hình" — `extension.configure` không tồn tại (Quyết định D1, spec).
  */
-export default function Extensions() {
+export default function Extensions({ active }: { active: boolean }) {
   const [installed, setInstalled] = useState<ExtensionSummary[]>([]);
   const [available, setAvailable] = useState<ExtensionOffer[]>([]);
   const [unreadable, setUnreadable] = useState(0);
@@ -69,9 +69,10 @@ export default function Extensions() {
     }
   }, [t]);
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (active) void reload();
+  }, [active, reload]);
 
   async function browseInstallFromPath() {
     const picked = await openDialog({ directory: true, multiple: false });

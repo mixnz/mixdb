@@ -16,6 +16,7 @@ import {
   type JobRow,
   type ServiceRow,
 } from "../../daemonState";
+import { subscribeDaemonWatch } from "../../daemonWatch";
 import { pendingFrom } from "../../pendingOps";
 import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
 import styles from "./Dashboard.module.css";
@@ -35,7 +36,7 @@ const PENDING_LABEL = {
  * `service_state_changed` nói vậy, không phải ngay lúc bấm — một công tắc nói dối về việc MariaDB
  * có đang chạy hay không tệ hơn một công tắc chậm.
  */
-export default function Dashboard() {
+export default function Dashboard({ active }: { active: boolean }) {
   const [status, setStatus] = useState<DaemonStatus | null>(null);
   const [rows, setRows] = useState<ServiceRow[]>([]);
   const [pending, setPending] = useState<unknown[] | null>(null);
@@ -108,9 +109,15 @@ export default function Dashboard() {
     [reload, t],
   );
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — sự kiện service_state_changed không bao
+  // giờ báo tin một service khác được tạo/xoá ở màn Services, và không method-kiểu-runtime nào
+  // (cài/gỡ PHP...) sinh sự kiện gì cho bảng này biết cả; quay lại tab vẫn là đường dự phòng.
   useEffect(() => {
-    void reload();
-    api.watch((raw) => {
+    if (active) void reload();
+  }, [active, reload]);
+
+  useEffect(() => {
+    return subscribeDaemonWatch((raw) => {
       // Một lô rỗng nghĩa là không còn gì chờ — đóng hộp thoại thay vì để nó đứng đó rỗng không.
       // `elevation_required` mang cả số mới nhất: cập nhật `waiting` thẳng từ đây, không đợi một
       // `reload()` khác — nếu không, nút "N thao tác đang chờ" đứng yên với số cũ sau khi Cho phép,
@@ -125,11 +132,8 @@ export default function Dashboard() {
       // có trên màn hình. Ngoài updater, vì updater chạy hai lần trong StrictMode.
       if (needsResync(raw)) void reload();
       setRows((current) => applyEvent(current, raw).rows);
-    }).catch((e: unknown) => setError(errorMessage(t, e)));
-    return () => {
-      void api.unwatch();
-    };
-  }, [reload, t]);
+    });
+  }, [reload]);
 
 
 

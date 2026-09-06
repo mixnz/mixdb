@@ -5,6 +5,20 @@
   padding: 16px;
 }
 
+/* Dính ngay dưới dải Ngôn ngữ/Gói của `Runtimes.tsx` — `--tabstrip-height` là chiều cao thật của
+   dải đó, đặt trên `.runtimes` (ancestor) và đo lại bằng ResizeObserver, xem `Runtimes.tsx`. */
+.categoryTabStrip {
+  position: sticky;
+  top: var(--tabstrip-height, 0px);
+  z-index: 1;
+  background: var(--surface-bg);
+  /* `.packages` có `padding: 16px`, nhưng dải dính phải chạy hết bề ngang vùng cuộn, không hở ra
+     một khe hai bên để bảng bên dưới lộ qua lúc cuộn — kéo nó ra lại rìa trái/phải của `.packages`.
+     Không thêm padding ngang riêng: padding có sẵn của `.small`/`.strip` (`TabStrip.module.css`)
+     đã canh đúng cỡ thụt lề của dải Ngôn ngữ/Gói phía trên, cộng thêm vào đây sẽ lệch nhau. */
+  margin: 0 -16px;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

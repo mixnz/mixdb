@@ -22,6 +22,7 @@ import {
   scaffoldStepIndex,
 } from "../../blueprintPlan";
 import { applyJob, type JobRow } from "../../daemonState";
+import { subscribeDaemonWatch } from "../../daemonWatch";
 import { applyLogFrame, type LogEntry } from "../../logState";
 import { jobFor } from "../../runtimeState";
 import styles from "./ApplyDialog.module.css";
@@ -110,16 +111,14 @@ export default function ApplyDialog({ blueprint, onCancel, onDone }: Props) {
     }
   }
 
-  // Theo dõi job khi đang chạy — mở đúng một lần, đóng khi rời phase "running".
+  // Theo dõi job khi đang chạy — đăng ký đúng một lần, gỡ khi rời phase "running". Qua
+  // `subscribeDaemonWatch` chứ không gọi thẳng `api.watch()`: kênh đó dùng chung cho cả app (xem
+  // `daemonWatch.ts`) — Dashboard/Sites/Runtimes rất có thể đang mở cùng lúc dialog này, và một
+  // `api.watch()`/`api.unwatch()` riêng ở đây sẽ giành mất hoặc đóng luôn kênh của chúng.
   useEffect(() => {
     if (phase.kind !== "running") return;
-    api.watch((raw) => setJobs((current) => applyJob(current, raw))).catch((e: unknown) => {
-      setError(errorMessage(t, e));
-    });
-    return () => {
-      void api.unwatch();
-    };
-  }, [phase.kind, t]);
+    return subscribeDaemonWatch((raw) => setJobs((current) => applyJob(current, raw)));
+  }, [phase.kind]);
 
   // Job đã biến khỏi JobRow[] (job_finished) — đọc lại kết quả đầy đủ qua job.status.
   useEffect(() => {

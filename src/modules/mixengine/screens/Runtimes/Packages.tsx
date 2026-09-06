@@ -9,12 +9,13 @@ import * as api from "../../api";
 import type { PackageRelease } from "../../api/types/PackageRelease";
 import type { PackageSummary } from "../../api/types/PackageSummary";
 import { applyJob, type JobRow } from "../../daemonState";
+import { subscribeDaemonWatch } from "../../daemonWatch";
 import { finishedJobId, formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import { PACKAGE_CATEGORY_ORDER, packageCategory, type PackageCategory } from "./packageCategories";
 import styles from "./Packages.module.css";
 
-export default function Packages() {
+export default function Packages({ active }: { active: boolean }) {
   const [installed, setInstalled] = useState<PackageSummary[]>([]);
   const [available, setAvailable] = useState<PackageRelease[]>([]);
   const [stale, setStale] = useState(false);
@@ -69,9 +70,13 @@ export default function Packages() {
     }
   }, [t]);
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại tab này — cùng lý do `Languages.tsx`/`Dashboard.tsx`.
   useEffect(() => {
-    void reload();
-    api.watch((raw) => {
+    if (active) void reload();
+  }, [active, reload]);
+
+  useEffect(() => {
+    return subscribeDaemonWatch((raw) => {
       setJobs((current) => applyJob(current, raw));
       // Job đang theo dõi vừa xong: đọc lại "đã cài"/"có thể cài" — không có tin nào khác báo
       // chuyện này, xem `Languages.tsx`.
@@ -86,11 +91,8 @@ export default function Packages() {
           return next;
         });
       }
-    }).catch((e: unknown) => setError(errorMessage(t, e)));
-    return () => {
-      void api.unwatch();
-    };
-  }, [reload, t]);
+    });
+  }, [reload]);
 
   async function install(release: PackageRelease) {
     setError("");
@@ -121,7 +123,7 @@ export default function Packages() {
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
 
       {categoriesPresent.length > 1 && (
-        <TabStrip size="small" role="tablist">
+        <TabStrip size="small" role="tablist" className={styles.categoryTabStrip}>
           {categoriesPresent.map((cat) => {
             const active = cat === category;
             const pick = () => setCategory(cat);

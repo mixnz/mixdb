@@ -51,16 +51,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 - The Runtimes screen's "Services" tab is renamed "Software" and split into sub-tabs by function (web servers, databases, cache & queues) instead of one flat list, so it no longer shares a name with the sidebar's own Services screen.
 - The MixEngine Dashboard shows each service's state in your language and colours it, and start and stop share one button that reads the state it is in.
 - A dropdown with nothing chosen yet shows its placeholder dimmed, so it reads as a prompt rather than as a value.
+- The Runtimes screen's Languages/Software tabs, and the Software tab's web servers/databases/cache & queues tabs, stay visible at the top while their lists scroll, instead of scrolling out of view.
 
 ### Fixed
 
 - Start, stop and restart in the MixEngine tab act on the service whose button was pressed. They were acting on every service at once.
 - The MixEngine install link opens the Vietnamese page when the app language is Vietnamese, instead of always English.
 - A runtime or package finishing its install now shows up in the installed list right away, instead of only after reopening the Runtimes tab.
+- Installing or uninstalling a runtime or package no longer loses its progress bar if you switch to another MixEngine screen and back while it's still running.
 - The Software tab's available-versions table shows the release channel, matching the Languages tab.
 - Creating a project with "keep this project's services out of idle shutdown" checked no longer fails with a raw MixEngine error.
 - The "MixEngine needs an administrator" dialog no longer dumps a certificate's raw bytes for a CA-trust request; it now just says how many.
-- Spacing and layout-shift fixes in the Runtimes install-progress table, the Services/Logs empty-state message, the Dashboard's service table, the site form's services list, the tab strip and the tab error screen.
+- Spacing and layout-shift fixes in the Runtimes install-progress table, the Services/Logs empty-state message, the Dashboard's service table, the site form's services list, the tab strip, the tab error screen, and button labels that wrapped onto a second line in narrow rows.
 
 ## [0.0.31] - 2026-09-06
 

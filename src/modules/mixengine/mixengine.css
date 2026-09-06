@@ -33,3 +33,14 @@
   min-height: 0;
   overflow: auto;
 }
+
+/* Một màn hình đã xem qua ở lại trong DOM để không mất state của nó — `display: contents` là để
+   nó không thêm một hộp mới vào layout (một số màn tự đặt `height: 100%` mong chờ là con trực tiếp
+   của `.mixengine-screen`, số khác không) khi đang hiện; `[hidden]` mới thật sự ẩn nó đi. */
+.mixengine-screen-pane {
+  display: contents;
+}
+
+.mixengine-screen-pane[hidden] {
+  display: none;
+}

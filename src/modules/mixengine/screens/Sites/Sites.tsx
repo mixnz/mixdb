@@ -8,6 +8,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { SiteDetail } from "../../api/types/SiteDetail";
 import type { SiteSharing } from "../../api/types/SiteSharing";
+import { subscribeDaemonWatch } from "../../daemonWatch";
 import { applySharingChange, canEditSite, formatRemaining, type SiteRow } from "../../siteState";
 import ShareDialog from "./ShareDialog";
 import SiteForm from "./SiteForm";
@@ -57,7 +58,7 @@ function SharingCell({
  * duy nhất `mix` là client yếu hơn": với CLI lý do nằm trong log không ai đọc, ở đây nó phải là một
  * dòng thấy được ngay khi nó tới.
  */
-export default function Sites() {
+export default function Sites({ active }: { active: boolean }) {
   const [rows, setRows] = useState<SiteRow[]>([]);
   const [projectNames, setProjectNames] = useState<string[]>([]);
   const [projectFilter, setProjectFilter] = useState("");
@@ -81,15 +82,16 @@ export default function Sites() {
     void api.projects().then((list) => setProjectNames(list.projects.map((p) => p.name)));
   }, []);
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
   useEffect(() => {
-    void reload();
-    api.watch((raw) => {
+    if (active) void reload();
+  }, [active, reload]);
+
+  useEffect(() => {
+    return subscribeDaemonWatch((raw) => {
       setRows((current) => applySharingChange(current, raw));
-    }).catch((e: unknown) => setError(errorMessage(t, e)));
-    return () => {
-      void api.unwatch();
-    };
-  }, [reload, t]);
+    });
+  }, []);
 
   async function edit(domain: string) {
     try {

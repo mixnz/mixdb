@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 import ErrorBanner from "../../components/ErrorBanner";
@@ -46,6 +46,19 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const { t, lang } = useTranslation();
+
+  /* Mỗi màn hình sidebar tự quản lý watch/reload riêng của nó (qua `subscribeDaemonWatch`) và có
+     thể đang giữa một việc dài hơi (một job cài đặt ở Runtimes) khi người dùng đổi sang màn khác —
+     đổi màn không được unmount nó, nếu không state cục bộ đang theo dõi việc đó mất sạch. Nên
+     render mỗi màn đã từng xem qua đúng một lần, chỉ ẩn/hiện bằng `hidden`; màn chưa xem qua thì
+     chưa vào DOM (mở tất cả chín màn ngay từ đầu là chín lượt gọi API cho những màn có thể không
+     bao giờ được xem).
+     Khai báo trước mọi `return` sớm bên dưới (cổng "chưa hỏi xong"/"daemon không chạy") — Hook
+     phải chạy đều ở mọi lần render, không được đứng sau một nhánh return. */
+  const [mountedScreens, setMountedScreens] = useState<MixEngineScreen[]>([screen]);
+  useEffect(() => {
+    setMountedScreens((prev) => (prev.includes(screen) ? prev : [...prev, screen]));
+  }, [screen]);
 
   const look = useCallback(async () => {
     setPresence(await api.presence());
@@ -113,19 +126,35 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
     onStateChange({ screen: next });
   }
 
+  /* `render` nhận `active` thay vì nhận thẳng một node dựng sẵn — mỗi màn tự quyết định làm gì với
+     nó (đọc lại danh sách khi vừa quay lại, xem `Dashboard.tsx`/`ServicesDetail.tsx`...). Giữ mount
+     không kéo theo tự đọc lại: một sự kiện live-update không phải lúc nào cũng phủ hết những gì đổi
+     ở màn khác trong lúc màn này bị ẩn (gỡ/cài PHP không sinh `service_state_changed`, nhưng vẫn có
+     thể là lý do người dùng quay lại Dashboard/Services để nhìn), nên mỗi màn tự đọc lại lúc `active`
+     chuyển sang `true` — đúng câu spec đã viết: "tự đọc lại khi focus quay lại tab". */
+  function pane(key: MixEngineScreen, render: (active: boolean) => ReactNode) {
+    if (!mountedScreens.includes(key)) return null;
+    const active = screen === key;
+    return (
+      <div key={key} className="mixengine-screen-pane" hidden={!active}>
+        {render(active)}
+      </div>
+    );
+  }
+
   return (
     <div className="mixengine-root mixengine-layout">
       <Sidebar screen={screen} onSelect={selectScreen} />
       <div className="mixengine-screen">
-        {screen === "dashboard" && <Dashboard />}
-        {screen === "projects" && <Projects />}
-        {screen === "sites" && <Sites />}
-        {screen === "domains" && <Domains />}
-        {screen === "runtimes" && <Runtimes />}
-        {screen === "servicesDetail" && <ServicesDetail />}
-        {screen === "logs" && <Logs />}
-        {screen === "blueprints" && <Blueprints />}
-        {screen === "extensions" && <Extensions />}
+        {pane("dashboard", (active) => <Dashboard active={active} />)}
+        {pane("projects", (active) => <Projects active={active} />)}
+        {pane("sites", (active) => <Sites active={active} />)}
+        {pane("domains", (active) => <Domains active={active} />)}
+        {pane("runtimes", (active) => <Runtimes active={active} />)}
+        {pane("servicesDetail", (active) => <ServicesDetail active={active} />)}
+        {pane("logs", (active) => <Logs active={active} />)}
+        {pane("blueprints", (active) => <Blueprints active={active} />)}
+        {pane("extensions", (active) => <Extensions active={active} />)}
       </div>
     </div>
   );

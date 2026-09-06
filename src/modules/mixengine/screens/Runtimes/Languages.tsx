@@ -9,12 +9,13 @@ import * as api from "../../api";
 import type { RuntimeRelease } from "../../api/types/RuntimeRelease";
 import type { RuntimeSummary } from "../../api/types/RuntimeSummary";
 import { applyJob, type JobRow } from "../../daemonState";
+import { subscribeDaemonWatch } from "../../daemonWatch";
 import { finishedJobId, formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import ExtensionsPanel from "./ExtensionsPanel";
 import styles from "./Languages.module.css";
 
-export default function Languages() {
+export default function Languages({ active }: { active: boolean }) {
   const [installed, setInstalled] = useState<RuntimeSummary[]>([]);
   const [available, setAvailable] = useState<RuntimeRelease[]>([]);
   const [stale, setStale] = useState(false);
@@ -45,9 +46,15 @@ export default function Languages() {
     }
   }, [t]);
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại tab này — cùng lý do `Dashboard.tsx`. Tách khỏi
+  // effect watch bên dưới: watch phải sống suốt vòng đời component (job đang cài vẫn phải được
+  // theo dõi khi người dùng ghé qua Gói hay màn khác), còn reload chỉ cần chạy khi *đang nhìn*.
   useEffect(() => {
-    void reload();
-    api.watch((raw) => {
+    if (active) void reload();
+  }, [active, reload]);
+
+  useEffect(() => {
+    return subscribeDaemonWatch((raw) => {
       setJobs((current) => applyJob(current, raw));
       // Job đang theo dõi vừa xong: bảng "đã cài" không tự biết bản mới trừ khi đọc lại — không
       // có API nào khác báo tin này (T3, `daemonState.ts`: sự kiện không bao giờ là đường duy
@@ -63,11 +70,8 @@ export default function Languages() {
           return next;
         });
       }
-    }).catch((e: unknown) => setError(errorMessage(t, e)));
-    return () => {
-      void api.unwatch();
-    };
-  }, [reload, t]);
+    });
+  }, [reload]);
 
   async function install(release: RuntimeRelease) {
     setError("");

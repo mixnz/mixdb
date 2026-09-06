@@ -14,7 +14,7 @@ const INITIAL_TAIL = 200;
 
 type StreamFilter = "all" | "stdout" | "stderr";
 
-export default function Logs() {
+export default function Logs({ active }: { active: boolean }) {
   const [ids, setIds] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [tail, setTail] = useState(INITIAL_TAIL);
@@ -23,12 +23,15 @@ export default function Logs() {
   const [error, setError] = useState("");
   const { t } = useTranslation();
 
+  // Đọc lại danh sách service lúc mount và mỗi lần vừa quay lại màn này — cùng lý do
+  // `Dashboard.tsx`/`ServicesDetail.tsx`.
   useEffect(() => {
+    if (!active) return;
     api
       .services()
       .then((list) => setIds(list.services.map((s) => s.id)))
       .catch((e: unknown) => setError(errorMessage(t, e)));
-  }, [t]);
+  }, [active, t]);
 
   useEffect(() => {
     if (selected === null) return;

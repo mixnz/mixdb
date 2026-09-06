@@ -6,6 +6,11 @@
      one crooked shape rather than as a labelled icon. Set here rather than at each call site, since
      a button with a single child — which is most of them — is unaffected by it. */
   gap: 0.4em;
+  /* A button squeezed inside a flex row (a table's action cell, a status row) shrinks its own label
+     onto a second line before anything else in the row gives up its space — set here so every
+     caller gets it, not just the ones that happened to notice. Flexible siblings without their own
+     `flex-shrink: 0` still absorb the squeeze by shrinking or wrapping their own text. */
+  white-space: nowrap;
   border-radius: var(--control-radius);
   border: 1px solid var(--control-border);
   font-weight: 500;

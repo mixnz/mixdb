@@ -13,7 +13,7 @@ import ProjectForm from "./ProjectForm";
 import styles from "./Projects.module.css";
 
 /** Mọi project đã đăng ký trong home — tạo, sửa (tên/root/pin/keep_warm), xoá. */
-export default function Projects() {
+export default function Projects({ active }: { active: boolean }) {
   const [rows, setRows] = useState<ProjectSummary[]>([]);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -32,9 +32,10 @@ export default function Projects() {
     }
   }, [t]);
 
+  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    if (active) void reload();
+  }, [active, reload]);
 
   async function showDetail(name: string) {
     try {
