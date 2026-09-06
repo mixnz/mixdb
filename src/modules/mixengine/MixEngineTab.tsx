@@ -11,6 +11,7 @@ import Dashboard from "./screens/Dashboard";
 import Domains from "./screens/Domains";
 import Projects from "./screens/Projects";
 import Runtimes from "./screens/Runtimes";
+import ServicesDetail from "./screens/ServicesDetail";
 import Sites from "./screens/Sites";
 import { parseMixEngineTabState, type MixEngineScreen } from "./tabState";
 import "./mixengine.css";
@@ -112,6 +113,7 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
         {screen === "sites" && <Sites />}
         {screen === "domains" && <Domains />}
         {screen === "runtimes" && <Runtimes />}
+        {screen === "servicesDetail" && <ServicesDetail />}
       </div>
     </div>
   );
