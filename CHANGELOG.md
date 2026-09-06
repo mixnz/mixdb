@@ -46,6 +46,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 
 - A MixEngine tab: see the local daemon and the services it supervises, and start, stop or restart
   one.
+- The MixEngine tab manages sites: create and edit them, share one on the LAN, and check domain
+  DNS status, certificate authority trust and per-site certificates.
 - SQL Server connections can be saved and connected, their tables read, their rows edited, added
   and deleted, hand-typed queries run in the Query tab, their databases, tables, columns and
   indexes created, changed and dropped from the Structure tab, and their databases dumped to a
