@@ -10,7 +10,7 @@ import type { RuntimeRelease } from "../../api/types/RuntimeRelease";
 import type { RuntimeSummary } from "../../api/types/RuntimeSummary";
 import { applyJob, type JobRow } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
-import { finishedJobId, formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
+import { formatInstalledAt, jobFinished, jobFor, versionKey } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import ExtensionsPanel from "./ExtensionsPanel";
 import styles from "./Languages.module.css";
@@ -34,17 +34,23 @@ export default function Languages({ active }: { active: boolean }) {
     installingJobRef.current = installingJob;
   }, [installingJob]);
 
-  const reload = useCallback(async () => {
-    try {
-      const [inst, avail] = await Promise.all([api.runtimesInstalled(), api.runtimesAvailable()]);
-      setInstalled(inst.runtimes);
-      setAvailable(avail.runtimes);
-      setStale(avail.stale);
-      setError("");
-    } catch (e) {
-      setError(errorMessage(t, e));
-    }
-  }, [t]);
+  // `stillShow` là câu lỗi phải sống sót qua lần đọc lại này. Một job cài hỏng vẫn phải được kể
+  // lại dù lần đọc ngay sau đó trả lời bình thường: đọc lại được không có nghĩa là việc cài đã
+  // xong. Rỗng — mặc định — là "đọc xong thì màn hình sạch", đúng như trước.
+  const reload = useCallback(
+    async (stillShow = "") => {
+      try {
+        const [inst, avail] = await Promise.all([api.runtimesInstalled(), api.runtimesAvailable()]);
+        setInstalled(inst.runtimes);
+        setAvailable(avail.runtimes);
+        setStale(avail.stale);
+        setError(stillShow);
+      } catch (e) {
+        setError(errorMessage(t, e));
+      }
+    },
+    [t],
+  );
 
   // Đọc lại lúc mount và mỗi lần vừa quay lại tab này — cùng lý do `Dashboard.tsx`. Tách khỏi
   // effect watch bên dưới: watch phải sống suốt vòng đời component (job đang cài vẫn phải được
@@ -59,19 +65,22 @@ export default function Languages({ active }: { active: boolean }) {
       // Job đang theo dõi vừa xong: bảng "đã cài" không tự biết bản mới trừ khi đọc lại — không
       // có API nào khác báo tin này (T3, `daemonState.ts`: sự kiện không bao giờ là đường duy
       // nhất, nhưng ở đây nó là đường *đầu tiên*, còn mở lại tab vẫn là đường dự phòng).
-      const finishedId = finishedJobId(raw);
-      if (finishedId !== null && Object.values(installingJobRef.current).includes(finishedId)) {
-        void reload();
+      const finished = jobFinished(raw);
+      if (finished !== null && Object.values(installingJobRef.current).includes(finished.id)) {
+        // Job hỏng thì `job_finished` là chỗ duy nhất nói ra vì sao — xem `jobFinished`. Đọc lại
+        // vẫn phải chạy (một job hỏng nửa chừng vẫn có thể đã đổi thứ gì đó), nhưng nó không được
+        // xoá mất câu lỗi vừa tới.
+        void reload(finished.error === null ? "" : errorMessage(t, finished.error));
         setInstallingJob((current) => {
           const next = { ...current };
           for (const key of Object.keys(next)) {
-            if (next[key] === finishedId) delete next[key];
+            if (next[key] === finished.id) delete next[key];
           }
           return next;
         });
       }
     });
-  }, [reload]);
+  }, [reload, t]);
 
   async function install(release: RuntimeRelease) {
     setError("");

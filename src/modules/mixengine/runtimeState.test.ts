@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { finishedJobId, formatInstalledAt, jobFor, poolBanner, versionKey } from "./runtimeState";
+import { formatInstalledAt, jobFinished, jobFor, poolBanner, versionKey } from "./runtimeState";
 import type { JobRow } from "./daemonState";
 
 describe("versionKey", () => {
@@ -46,22 +46,74 @@ describe("jobFor", () => {
   });
 });
 
-describe("finishedJobId", () => {
+describe("jobFinished", () => {
   it("reads the job id off a job_finished message", () => {
-    expect(finishedJobId(JSON.stringify({ type: "job_finished", job: 7 }))).toBe(7);
+    expect(jobFinished(JSON.stringify({ type: "job_finished", job: 7, ending: "succeeded" }))?.id).toBe(
+      7,
+    );
   });
 
-  it("returns null for a job_progress message", () => {
+  it("carries no error for a job that succeeded", () => {
+    const finished = jobFinished(
+      JSON.stringify({ type: "job_finished", job: 7, ending: "succeeded", result: null }),
+    );
+    expect(finished?.error).toBeNull();
+  });
+
+  // Một job hỏng là toàn bộ lý do hàm này đọc `ending`: đây là chỗ duy nhất câu của daemon tới
+  // được người dùng, và bản trước bỏ nó đi — thanh tiến độ biến mất, danh sách không đổi, không
+  // một chữ nào giải thích.
+  it("turns a failed job into the same refusal a rejected call would have carried", () => {
+    const finished = jobFinished(
+      JSON.stringify({
+        type: "job_finished",
+        job: 7,
+        ending: "failed",
+        error: {
+          code: "precondition_failed",
+          message: "archive contains ./, which is not inside it",
+          hint: "nothing was unpacked",
+        },
+      }),
+    );
+    expect(finished?.error).toEqual({
+      code: "error.mixengineRefused",
+      params: {
+        code: "precondition_failed",
+        message: "archive contains ./, which is not inside it",
+        hint: "nothing was unpacked",
+      },
+    });
+  });
+
+  it("leaves out the hint a failure did not carry, rather than sending an empty one", () => {
+    const finished = jobFinished(
+      JSON.stringify({
+        type: "job_finished",
+        job: 7,
+        ending: "failed",
+        error: { code: "io", message: "disk full" },
+      }),
+    );
+    expect(finished?.error?.params).not.toHaveProperty("hint");
+  });
+
+  // Người dùng tự huỷ thì không có gì để báo — banner đỏ cho một việc họ vừa yêu cầu là nhiễu.
+  it("carries no error for a cancelled job", () => {
     expect(
-      finishedJobId(JSON.stringify({ type: "job_progress", job: 7, percent: 40 })),
+      jobFinished(JSON.stringify({ type: "job_finished", job: 7, ending: "cancelled" }))?.error,
     ).toBeNull();
   });
 
+  it("returns null for a job_progress message", () => {
+    expect(jobFinished(JSON.stringify({ type: "job_progress", job: 7, percent: 40 }))).toBeNull();
+  });
+
   it("returns null for an unrelated message", () => {
-    expect(finishedJobId(JSON.stringify({ type: "service_state_changed" }))).toBeNull();
+    expect(jobFinished(JSON.stringify({ type: "service_state_changed" }))).toBeNull();
   });
 
   it("returns null for invalid JSON", () => {
-    expect(finishedJobId("not json")).toBeNull();
+    expect(jobFinished("not json")).toBeNull();
   });
 });
