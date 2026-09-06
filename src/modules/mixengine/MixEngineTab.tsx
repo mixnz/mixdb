@@ -9,6 +9,7 @@ import * as api from "./api";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./screens/Dashboard";
 import Domains from "./screens/Domains";
+import Logs from "./screens/Logs";
 import Projects from "./screens/Projects";
 import Runtimes from "./screens/Runtimes";
 import ServicesDetail from "./screens/ServicesDetail";
@@ -114,6 +115,7 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
         {screen === "domains" && <Domains />}
         {screen === "runtimes" && <Runtimes />}
         {screen === "servicesDetail" && <ServicesDetail />}
+        {screen === "logs" && <Logs />}
       </div>
     </div>
   );
