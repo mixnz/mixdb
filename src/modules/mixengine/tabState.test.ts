@@ -17,6 +17,10 @@ describe("parseMixEngineTabState", () => {
     expect(parseMixEngineTabState({ screen: "blueprints" })?.screen).toBe("blueprints");
   });
 
+  it("accepts extensions", () => {
+    expect(parseMixEngineTabState({ screen: "extensions" })?.screen).toBe("extensions");
+  });
+
   it("rejects a fourth screen and garbage", () => {
     expect(parseMixEngineTabState({ screen: "metrics" })).toBeUndefined();
     expect(parseMixEngineTabState("dashboard")).toBeUndefined();
