@@ -323,3 +323,22 @@ pub async fn mixengine_database_create(params: Value) -> Result<Value, AppError>
 pub async fn mixengine_database_client(service: String) -> Result<Value, AppError> {
     rpc::call("database.client", json!({ "service": service })).await
 }
+
+/// Mở stream log của một service. Mở lại (một service khác, hay cùng service với `tail` khác) đóng
+/// cái đang mở — đúng luật `LogsState::keep` đã theo cho `MixEngineState`.
+#[tauri::command]
+pub async fn mixengine_logs_watch(
+    service: String,
+    tail: u32,
+    follow: bool,
+    on_line: Channel<String>,
+    state: State<'_, super::state::LogsState>,
+) -> Result<(), AppError> {
+    super::logs::stream_logs(service, tail, follow, on_line, &state).await
+}
+
+/// Đóng stream log đang mở. Gọi khi không có gì mở là vô hại.
+#[tauri::command]
+pub fn mixengine_logs_unwatch(state: State<'_, super::state::LogsState>) {
+    state.stop();
+}
