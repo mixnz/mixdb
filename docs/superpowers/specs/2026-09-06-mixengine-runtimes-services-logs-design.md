@@ -13,7 +13,8 @@ chấp nhận; không phải việc của spec này.
 - **Projects**: màn hình mới, ngoài 9 màn hình gốc của `client-surface.md` — xem "Vì sao có Projects"
   dưới đây. Danh sách, tạo, sửa (tên/root/pin phiên bản/`keep_warm`), xoá.
 - **Runtimes**: phiên bản PHP/Node/Python/Ruby đã cài (mặc định được đánh dấu), phiên bản có thể cài;
-  cài/gỡ là job có tiến độ thật — lần đầu module này vẽ một progress bar thật thay vì `wait: true`.
+  cài/gỡ là job có tiến độ thật, dùng lại `applyJob`/`JobRow` (`daemonState.ts`) đã có từ trước — xem
+  mục 3 cho lý do đây không phải hạ tầng mới.
   Bật/tắt PHP extension theo từng phiên bản — có method ghi thật, xem mục 2.
 - **Packages** (MariaDB, Caddy, Redis…, khác `runtime.*`): cùng màn hình với Runtimes, hai tab con,
   cùng luồng cài/gỡ có tiến độ — theo đúng ý bạn: "package cần một luồng cài đặt y hệt Runtimes".
@@ -212,25 +213,33 @@ sách dùng được, nhưng im lặng về nó là nói dối đã hỏi đư�
   một service instance chọn version của nó lúc `service.create`, không có "version mặc định của
   MariaDB" theo nghĩa toàn máy.
 
-## 3. Job — hạ tầng đã có từ Pha 1, lần đầu chạy thật
+## 3. Job — hạ tầng đã có sẵn, tự đọc lại code trước khi định viết thêm
 
-Không stream mới. `JobProgress { job, percent, message, at }` và `JobFinish { job, at, ending: …
-}` đã tới trên `GET /events` mà `mixengine_watch` đã mở. Việc của Pha này là một hàm thuần
-`jobState.ts` — cùng khuôn `daemonState.ts` đã có (`rowsFrom`, `applyEvent`, thuần, test không cần
-daemon) — giữ một map `JobId -> JobProgress | JobFinish` từ các message đã thấy, và một component vẽ
-thanh tiến độ từ đó theo `job.id` nó đang theo dõi. Component này **dùng chung cho cả Runtimes và
-Packages** — cả hai chỉ khác `JobKind` (`"runtime.install"` so với `"package.install"`), không khác gì
-ở cách vẽ.
+**Sửa lại so với bản nháp trước: `applyJob`/`JobRow` đã tồn tại trong `daemonState.ts`, và
+`Dashboard.tsx` đã vẽ một danh sách job kèm `<progress>` từ Pha 1/2 — không phải "lần đầu module này
+vẽ progress bar" như bản nháp trước viết. Đây là đúng loại lỗi Rủi ro của spec này đã tự cảnh báo: đọc
+tên module rồi đoán nội dung, thay vì mở file ra đọc.** Việc của Pha 3 **không phải** viết một
+`jobState.ts` mới — là dùng lại `applyJob(jobs: JobRow[], raw: string): JobRow[]` và
+`interface JobRow { id, kind, percent, message }` đã có, đúng chỗ `daemonState.ts` đã có
+`rowsFrom`/`applyEvent`/`needsResync` cho service.
 
+- **Dashboard đã hiện job của Runtimes/Packages miễn phí, không cần sửa gì ở đó** — `applyJob` không
+  lọc theo `kind`, một `runtime.install` hay `package.install` tự động lên danh sách job chung của
+  Dashboard ngay khi nó chạy, y hệt cách `elevation.grant`/`daemon.doctor_repair` đã lên đó từ trước.
+- **Màn hình Runtimes & Packages cần vẽ tiến độ riêng, ngay trên hàng của phiên bản đang cài** — đây
+  mới là phần thật sự mới. Màn hình tự mở `api.watch()` của chính nó (mỗi màn hình tự quản lý
+  watch/unwatch, đúng pattern `Dashboard`/`Sites` đã theo), áp `applyJob` lên một `JobRow[]` cục bộ, và
+  giữ thêm một map cục bộ `installingJob: Record<VersionKey, number>` — gán ngay khi
+  `runtime.install`/`package.install` trả về `JobSummary.id`, dùng để tra `jobs.find(j => j.id ===
+  installingJob[key])` cho đúng hàng. `JobRow` không mang theo version/kind của package — đây là lý do
+  cần map cục bộ, không phải thứ `daemonState.ts` phải biết.
 - **Không cần `job.list` hay `job.status` để vẽ một job vừa tự mình tạo ra** — id đã có ngay trong câu
   trả lời của `runtime.install`/`package.install`, và mọi bước tiếp theo tới qua stream đang mở sẵn.
-- **Cần `job.status` (hoặc `job.list` lọc `state: running`) đúng một lần: lúc mở tab.** Một job đang
-  chạy từ trước khi tab này mở (cài một bản PHP từ CLI, rồi mở MixDB) không có `job_progress` nào cho
-  UI thấy nó bắt đầu — bảng service đã theo luật này từ Pha 1 (`service.list` lúc mount, sự kiện chỉ
-  cập nhật từ đó), job cũng vậy.
-- **Job đã xong khi tab đóng rồi mở lại không cần vẽ lại** — `JobFinish` không tới hai lần cho một
-  job đã kết thúc trước khi client này mở stream, và bảng "có thể cài" tự đọc lại `installed: true`
-  qua `*.list_available`/`list_installed` lần sau, không qua job.
+- **Cần `job.status` (hoặc `job.list` lọc `state: running`) đúng một lần: lúc mở màn hình.** Một job
+  đang chạy từ trước khi màn hình này mở (cài một bản PHP từ CLI, rồi mở MixDB) không có `job_progress`
+  nào cho UI thấy nó bắt đầu — nhưng vì `JobRow` không mang version, một job "mồ côi" kiểu này không
+  có hàng nào để gắn vào; cách xử lý thực tế là bảng "có thể cài" tự đọc `installed`/`stale` lại khi
+  focus quay lại tab, không cố gắn job cũ vào một hàng.
 - `job.cancel` — không dùng ở Pha này. Không method nào của Pha 3 sinh ra một job nên huỷ nửa chừng là
   an toàn (một bản tải dở không để lại service nào đang chạy dở); để lại cho Blueprints (Pha 4), nơi
   `RunScaffold` thật sự có thể cần huỷ.
@@ -279,17 +288,27 @@ chọn "n phút", không một checkbox.
   đã đăng ký từ Pha 0). Gọi `database.open` từ trong MixDB nghĩa là MixDB tự bảo daemon **mở một tiến
   trình MixDB khác** — vòng ra ngoài rồi vòng lại, đúng thứ roadmap T3.5 nói "không nên đi qua OS".
 
-  Đường thay thế: gọi `database.client` (đọc `secret: SecretAddress`), rồi dùng lại nguyên
-  `secrets_resolve_mixengine` (Pha 0,
-  [savedConnections.ts:80](../../../src/modules/db/savedConnections.ts)) với `secret.key` để lấy mật
-  khẩu, dựng một `ConnectionConfig` tạm (host `127.0.0.1`, cổng từ `ServiceSummary.port`, protocol từ
-  `DatabaseClientReport.protocol`), rồi mở nó như **một tab `db` mới trong cùng tiến trình đang chạy**.
+  **Sửa lại so với bản nháp trước: cơ chế mở tab đã có sẵn, không cần API mới — bản nháp trước đọc
+  nhầm `shell/launch.rs`/`launch.ts` là "chỉ dành cho OS-handoff", trong khi đọc lại code thì
+  `crate::launch::request` là một hàm Rust bình thường, gọi được từ bất kỳ command nào, không chỉ từ
+  chỗ nhận URL `mixdb://`.** Pha 0 đã dùng đúng nó cho việc này: `handoff::accept()`
+  ([handoff.rs:189-206](../../../src-tauri/src/modules/db/handoff.rs)) dựng một `Handoff`, gọi
+  `HandoffState::keep()` lấy một id, rồi gọi thẳng `crate::launch::request(app, TabRequest { module_id:
+  "db", state: json!({"handoffId": id}) })` — không có gì trong hàm đó nhắc tới nguồn gốc URL. Pha 3
+  chỉ cần lặp lại đúng ba bước đó **từ phía trong**, không qua URL:
 
-  **Chưa có đường mở tab module khác từ trong module đang chạy.** Cơ chế tab-request hiện có
-  (`shell/launch.ts`, `takeTabRequests`, `onTabRequest` ở [App.tsx:136](../../../src/shell/App.tsx))
-  là hàng đợi backend cho **handoff từ OS** (`mixdb://` gọi vào một instance khác hoặc instance này từ
-  ngoài) — không phải một API để một module tự mở tab module khác cùng tiến trình. Đây là quyết định
-  còn để ngỏ trước khi viết màn hình Database; xem **Quyết định D2**.
+  1. Gọi `database.client` (`DatabaseClientReport { protocol, secret, client }`).
+  2. Nếu có `secret: SecretAddress`, gọi thẳng `crate::secrets::secrets_resolve_mixengine(secret.key)`
+     — hàm Rust `pub async`, gọi được trực tiếp, không cần round-trip qua frontend rồi quay lại.
+  3. Dựng một `Handoff { config: ConnectionConfig { kind: <map từ DatabaseProtocol>, host:
+     "127.0.0.1", port: <ServiceSummary.port>, username, password, database: None, .. }, label:
+     <ServiceId>, keyring_ref: Some(secret.key) }`, `HandoffState::keep()`, rồi
+     `crate::launch::request(..., TabRequest { module_id: "db", state: json!({"handoffId": id}) })`.
+
+  `DbTab.tsx` đã biết đọc `{"handoffId": ...}` từ Pha 0 ([DbTab.tsx:506-525](../../../src/modules/db/DbTab.tsx))
+  — không sửa gì bên `db`. Mật khẩu không đi qua frontend một lần nào, kể cả tạm thời: nó chỉ sống
+  trong tiến trình Rust từ lúc đọc keyring tới lúc nằm trong `Handoff` đang chờ `db` lấy. Đây là quyết
+  định của Pha này — xem **Quyết định D2** (thay cho hai hướng spec bản trước còn để ngỏ).
 
 ## 5. Logs
 
@@ -326,7 +345,7 @@ Phần thuần, không cần daemon nào:
 | Test | Nội dung |
 | --- | --- |
 | `projectPins` | vẽ đúng `source` (file/row) và `resolved`/`hint` của mỗi `ProjectPin`; không suy ra `resolved` từ `constraint` phía client |
-| `jobState` | `job_progress` cập nhật đúng job theo `id`; `job_finished` chốt `outcome`; message của job khác không đụng job này; dùng chung được cho cả `JobKind` runtime lẫn package |
+| `installingJob` map (trong `runtimeState.ts` hay tương đương, không phải `applyJob` — cái đó đã có test riêng) | gán đúng `job.id` vào đúng `VersionKey` sau khi `install` trả lời; tra đúng hàng từ `JobRow[]` đã áp `applyJob` |
 | `poolOutcome` | ba giá trị `PoolOutcome` map đúng ba cách vẽ; `"pool_not_running"` không bị vẽ như lỗi |
 | `logState`/parser SSE `/logs` | `line`/`historic`/`gap` phân biệt đúng; `gap` không làm mất các dòng trước nó |
 | `limitsForm` | `support.cpu = "unsupported"` ẩn control CPU; `advisory` vẽ khác `hard`; gửi lại luôn cả ba field của `ResourceLimits` |
@@ -353,10 +372,13 @@ project mà site đang trỏ tới có bị refuse hay để lại site mồ cô
   project pin). `package.uninstall` **không có** `force` gì cả — ba khái niệm trông giống nhau, ba
   nghĩa khác nhau. Một hằng số hay một hàm helper dùng chung tên `force` cho cả hai chỗ có nó là điểm
   dễ lẫn nhất file này để lại cho code review.
-- **"Open in MixDB" mở tab qua hàng đợi backend vốn cho OS-handoff** (nếu D2 chọn hướng đó) có thể kéo
-  theo hành vi phụ không định trước — hàng đợi đó được `drain()` mỗi khi có `onTabRequest`, sự kiện
-  vốn để báo một instance khác vừa gọi vào; tái dùng nó cho một thao tác cùng tiến trình cần đọc kỹ
-  [launch.ts](../../../src/shell/launch.ts) trước, không chỉ đọc chỗ gọi ở `App.tsx`.
+- **`HandoffState` là app state dùng chung, không phải của riêng module `db`.** Command mới của
+  `database.client`/"Open" (mục 4) đọc/ghi state đó qua `crate::modules::db::handoff::HandoffState` từ
+  bên ngoài `modules/db/` — hợp lệ (đã `pub`, đã `.manage()` một lần ở `modules/db/mod.rs`), nhưng là
+  chỗ duy nhất module `mixengine` chạm vào state của module khác. Đáng một dòng comment tại chỗ gọi
+  giải thích tại sao, để không ai tưởng nhầm là vi phạm luật "không module nào biết khái niệm của
+  module khác" ([`eslint.config.js`](../../../eslint.config.js) chỉ canh phía TypeScript, không canh
+  phía Rust).
 
 ## Quyết định
 
@@ -371,14 +393,15 @@ Pha này chưa đối chiếu trực tiếp với `rpc.rs` — cụ thể là `p
 tra") và mọi type mới `runtime.list_extensions`/`set_extension` có thể kéo theo mà bindings hiện tại
 chưa vendor đủ.
 
-**D2 — "Open in MixDB" chờ quyết ở buổi viết code, không chốt ở spec này.** Hai hướng: (a) một API
-mới, nhỏ — một event bus trong tiến trình (`window` custom event hoặc một store) mà `App.tsx` lắng
-nghe để `openTab(moduleId, state)`, tách hẳn khỏi hàng đợi backend của OS-handoff; (b) tái dùng hàng
-đợi backend hiện có bằng cách chính module `mixengine` tự ghi vào cùng chỗ `launch.ts` đọc, dù đang
-cùng tiến trình. (a) sạch hơn về khái niệm (không mượn cơ chế nghĩ cho một tình huống khác) nhưng là
-code mới trong `shell/`, nơi ba module còn lại không ai chạm; (b) không thêm API nhưng mượn một cơ chế
-được viết cho một invariant khác ("có một request từ ngoài tới") cho một tình huống nó không phải vậy
-("tôi tự muốn mở"). Quyết trước khi viết màn hình Database.
+**D2 — "Open in MixDB" dùng lại nguyên đường Pha 0 đã đi: `Handoff` + `HandoffState` +
+`crate::launch::request`, gọi thẳng từ một Tauri command mới, không qua URL.** Không phải hai hướng
+spec bản trước cân nhắc ("API event bus mới" so với "mượn hàng đợi OS-handoff") — cả hai giả định sai
+rằng `launch::request` gắn với nguồn gốc OS. Đọc lại `launch.rs`: đó là một hàm nhận `TabRequest {
+module_id, state }` rồi đẩy vào một hàng đợi và bắn một sự kiện — không tham số nào nói tới URL hay
+tiến trình khác. `handoff::accept()` (Pha 0) đã gọi đúng nó theo cách này rồi; Database (Pha 3) gọi lại
+y hệt, chỉ khác nguồn tạo `Handoff` là `database.client` + `secrets_resolve_mixengine` gọi thẳng trong
+Rust thay vì đọc một URL `mixdb://`. Không thêm API mới ở `shell/`, không sửa `DbTab.tsx`. Xem mục 4
+cho các bước cụ thể.
 
 **D3 — `RuntimeCatalogue.stale` và `PackageCatalogue.stale` vẽ cùng một component.** Cùng hình dạng,
 cùng lý do tồn tại (cache không refresh được vẫn dùng được, im lặng về nó là nói dối), nên một badge
