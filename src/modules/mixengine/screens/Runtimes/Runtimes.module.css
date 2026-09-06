@@ -1,0 +1,26 @@
+.runtimes {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border, #ddd);
+  padding: 0 16px;
+}
+
+.tab,
+.activeTab {
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.activeTab {
+  border-bottom: 2px solid var(--accent, #0066ff);
+  font-weight: 600;
+}

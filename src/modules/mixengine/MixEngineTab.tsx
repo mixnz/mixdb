@@ -10,6 +10,7 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./screens/Dashboard";
 import Domains from "./screens/Domains";
 import Projects from "./screens/Projects";
+import Runtimes from "./screens/Runtimes";
 import Sites from "./screens/Sites";
 import { parseMixEngineTabState, type MixEngineScreen } from "./tabState";
 import "./mixengine.css";
@@ -110,6 +111,7 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
         {screen === "projects" && <Projects />}
         {screen === "sites" && <Sites />}
         {screen === "domains" && <Domains />}
+        {screen === "runtimes" && <Runtimes />}
       </div>
     </div>
   );
