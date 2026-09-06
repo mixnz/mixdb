@@ -8,6 +8,7 @@ import type { ModuleTabProps } from "../../shell/module";
 import * as api from "./api";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./screens/Dashboard";
+import Sites from "./screens/Sites";
 import { parseMixEngineTabState, type MixEngineScreen } from "./tabState";
 import "./mixengine.css";
 
@@ -102,7 +103,10 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
   return (
     <div className="mixengine-root mixengine-layout">
       <Sidebar screen={screen} onSelect={selectScreen} />
-      <div className="mixengine-screen">{screen === "dashboard" && <Dashboard />}</div>
+      <div className="mixengine-screen">
+        {screen === "dashboard" && <Dashboard />}
+        {screen === "sites" && <Sites />}
+      </div>
     </div>
   );
 }

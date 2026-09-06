@@ -1,0 +1,37 @@
+.sites {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 6px 12px 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.empty {
+  color: var(--text-muted);
+}
+
+.readOnly {
+  opacity: 0.6;
+}
