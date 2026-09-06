@@ -51,7 +51,7 @@ export function applyEvent(
   rows: ServiceRow[],
   raw: string,
 ): { rows: ServiceRow[]; resync: boolean } {
-  let event: { type?: unknown; id?: unknown; to?: unknown };
+  let event: { type?: unknown; service?: unknown; to?: unknown };
   try {
     event = JSON.parse(raw) as typeof event;
   } catch {
@@ -64,7 +64,11 @@ export function applyEvent(
       return { rows, resync: true };
 
     case "service_state_changed": {
-      const id = typeof event.id === "string" ? event.id : null;
+      /* `service`, **không phải** `id`. Bản phác Rust trong `daemon-and-ipc.md` của MixEngine viết
+         `ServiceStateChanged { id, .. }`, nhưng thứ daemon thật sự gửi là `ServiceTransition`, và
+         nó gọi field đó là `service`. Đọc nhầm tên thì mọi sự kiện rơi vào im lặng và bảng không
+         bao giờ đổi — hợp đồng đã sinh ở `api/types/` là sự thật, tài liệu kiến trúc thì không. */
+      const id = typeof event.service === "string" ? event.service : null;
       const to = typeof event.to === "string" ? (event.to as ServiceState) : null;
       if (id === null || to === null) return { rows, resync: false };
       // Không dựng hàng cho một service chưa biết: `service.list` là chỗ một hàng ra đời, và nó

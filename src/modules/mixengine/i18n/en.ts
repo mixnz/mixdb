@@ -20,6 +20,11 @@ export default {
       start: "Start",
       stop: "Stop",
       restart: "Restart",
+      // Shown in the state cell while an action is in flight, so a row never looks idle when it
+      // is not. The key is the action name plus "ing" — see the Dashboard.
+      starting: "Starting…",
+      stopping: "Stopping…",
+      restarting: "Restarting…",
       stopAll: "Stop all",
       noServices: "Nothing is set up yet.",
       job: "Working",

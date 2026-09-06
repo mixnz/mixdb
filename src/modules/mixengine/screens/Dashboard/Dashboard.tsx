@@ -17,6 +17,14 @@ import {
 import { pendingFrom } from "../../pendingOps";
 import styles from "./Dashboard.module.css";
 
+/* Bảng tra tường minh chứ không ghép `${action}ing`: "stop" + "ing" ra "stoping", và một khoá dịch
+   dựng bằng phép nối chuỗi là một khoá không ai grep ra được. */
+const PENDING_LABEL = {
+  start: "mixengine.dashboard.starting",
+  stop: "mixengine.dashboard.stopping",
+  restart: "mixengine.dashboard.restarting",
+} as const;
+
 /**
  * Daemon, và mọi thứ nó đang giám sát.
  *
@@ -30,6 +38,8 @@ export default function Dashboard() {
   const [pending, setPending] = useState<unknown[] | null>(null);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [error, setError] = useState("");
+  /** Service nào đang có một hành động bay, và là hành động nào. Khoá theo id. */
+  const [busy, setBusy] = useState<Record<string, api.ServiceAction>>({});
   const { t } = useTranslation();
 
   /* Mọi lỗi đi qua đây thành một câu người đọc được. `errorMessage` dịch `code` và điền `params`,
@@ -46,16 +56,31 @@ export default function Dashboard() {
     }
   }, [t]);
 
-  /** Một hành động trên một service; hàng tự đổi khi stream nói, không phải ở đây. */
+  /**
+   * Một hành động trên một service.
+   *
+   * Hàng vẫn đổi theo stream trong lúc hành động đang chạy — đó là luật "trạng thái được thông
+   * báo". Nhưng khi call trả về, đọc lại: **sự kiện là best-effort và không bao giờ là đường duy
+   * nhất biết trạng thái**, nên tin mỗi stream là để lại một bảng đứng im khi một sự kiện rơi.
+   * Đọc lại không phải là suy đoán, nó là đọc.
+   */
   const act = useCallback(
     async (id: string, action: api.ServiceAction) => {
+      setBusy((current) => ({ ...current, [id]: action }));
       try {
         await api.serviceAction(id, action);
       } catch (e) {
         setError(errorMessage(t, e));
+      } finally {
+        setBusy((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+        await reload();
       }
     },
-    [t],
+    [reload, t],
   );
 
   useEffect(() => {
@@ -85,8 +110,14 @@ export default function Dashboard() {
           <span className={styles.home}>{status.home}</span>
           {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
           <button
-            onClick={() => void Promise.all(rows.map((row) => act(row.id, "stop")))}
-            disabled={rows.every((row) => row.state !== "running")}
+            onClick={() =>
+              void Promise.all(
+                rows.filter((row) => row.state === "running").map((row) => act(row.id, "stop")),
+              )
+            }
+            disabled={
+              rows.every((row) => row.state !== "running") || Object.keys(busy).length > 0
+            }
           >
             {t("mixengine.dashboard.stopAll")}
           </button>
@@ -119,22 +150,33 @@ export default function Dashboard() {
             {rows.map((row) => (
               <tr key={row.id}>
                 <td>{row.id}</td>
-                <td>{row.state ?? "—"}</td>
+                <td>
+                  {busy[row.id] ? (
+                    <span className={styles.pending}>
+                      {t(PENDING_LABEL[busy[row.id]])}
+                    </span>
+                  ) : (
+                    (row.state ?? "—")
+                  )}
+                </td>
                 <td>{row.port ?? "—"}</td>
                 <td className={styles.actions}>
                   <button
                     onClick={() => void act(row.id, "start")}
-                    disabled={row.state === "running"}
+                    disabled={row.state === "running" || busy[row.id] !== undefined}
                   >
                     {t("mixengine.dashboard.start")}
                   </button>
                   <button
                     onClick={() => void act(row.id, "stop")}
-                    disabled={row.state !== "running"}
+                    disabled={row.state !== "running" || busy[row.id] !== undefined}
                   >
                     {t("mixengine.dashboard.stop")}
                   </button>
-                  <button onClick={() => void act(row.id, "restart")}>
+                  <button
+                    onClick={() => void act(row.id, "restart")}
+                    disabled={busy[row.id] !== undefined}
+                  >
                     {t("mixengine.dashboard.restart")}
                   </button>
                 </td>

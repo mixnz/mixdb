@@ -16,7 +16,7 @@ const rows: ServiceRow[] = [
 describe("applyEvent", () => {
   /* Trạng thái được thông báo, không bao giờ được suy ra: hàng đổi vì stream nói, không vì ai bấm. */
   it("moves a row when the stream says the service changed", () => {
-    const raw = JSON.stringify({ type: "service_state_changed", id: "caddy@main", to: "starting" });
+    const raw = JSON.stringify({ type: "service_state_changed", service: "caddy@main", to: "starting" });
     const next = applyEvent(rows, raw);
     expect(next.rows.find((r) => r.id === "caddy@main")?.state).toBe("starting");
     expect(next.rows.find((r) => r.id === "mariadb@main")?.state).toBe("running");
@@ -47,7 +47,7 @@ describe("applyEvent", () => {
 
   /* Một service chưa có trong bảng: không dựng hàng giả, đợi `service.list` nói nó là gì. */
   it("does not invent a row for a service it does not know", () => {
-    const raw = JSON.stringify({ type: "service_state_changed", id: "redis@main", to: "running" });
+    const raw = JSON.stringify({ type: "service_state_changed", service: "redis@main", to: "running" });
     expect(applyEvent(rows, raw).rows).toHaveLength(2);
   });
 
@@ -55,8 +55,17 @@ describe("applyEvent", () => {
   it("ignores a state change that names no service or no state", () => {
     expect(applyEvent(rows, JSON.stringify({ type: "service_state_changed", to: "running" })).rows)
       .toEqual(rows);
-    expect(applyEvent(rows, JSON.stringify({ type: "service_state_changed", id: "caddy@main" })).rows)
-      .toEqual(rows);
+    expect(
+      applyEvent(rows, JSON.stringify({ type: "service_state_changed", service: "caddy@main" }))
+        .rows,
+    ).toEqual(rows);
+  });
+
+  /* Ghim đúng cái lỗi đã mắc: `id` là tên trong bản phác kiến trúc của MixEngine, `service` là tên
+     daemon thật sự gửi. Đọc nhầm thì bảng đứng im và không gì báo. */
+  it("does not answer to the field name the architecture note used", () => {
+    const raw = JSON.stringify({ type: "service_state_changed", id: "caddy@main", to: "running" });
+    expect(applyEvent(rows, raw).rows).toEqual(rows);
   });
 });
 
@@ -113,7 +122,7 @@ describe("needsResync", () => {
       expect(applyEvent(rows, raw).resync).toBe(true);
     }
     for (const raw of [
-      JSON.stringify({ type: "service_state_changed", id: "caddy@main", to: "running" }),
+      JSON.stringify({ type: "service_state_changed", service: "caddy@main", to: "running" }),
       JSON.stringify({ type: "quantum_flux" }),
       "not json",
     ]) {
