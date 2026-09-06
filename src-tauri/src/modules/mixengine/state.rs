@@ -2,8 +2,9 @@
 //!
 //! Một tab một stream là sai. Bus sự kiện bên MixEngine là bus chung, sức chứa 1024 message, và
 //! hai tab MixEngine mở cùng lúc sẽ là hai kết nối `/events` cùng đọc nó. Một stream, mọi tab
-//! nghe cùng một `Channel`, là đủ cho pha này — Pha 3 thêm log thì log có stream riêng theo
-//! service và không đi qua đây ([ADR 0009 bên MixEngine]: log không bao giờ là sự kiện).
+//! nghe cùng một `Channel`, là đủ cho pha này — log có stream riêng theo service ([ADR 0009 bên
+//! MixEngine]: log không bao giờ là sự kiện), giữ trong `LogsState` ngay dưới đây, tách hẳn khỏi
+//! `MixEngineState`.
 
 use std::sync::Mutex;
 
@@ -24,6 +25,31 @@ impl MixEngineState {
     }
 
     /// Đóng stream đang mở. Gọi hai lần là vô hại.
+    pub fn stop(&self) {
+        let mut slot = self.open.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(token) = slot.take() {
+            token.cancel();
+        }
+    }
+}
+
+/// Đúng một stream log đang mở — riêng với `MixEngineState`, vì `/events` và `/logs/service/{id}`
+/// là hai kết nối cùng lúc, không phải một cái thay cái kia. Cùng hình dạng `keep`/`stop`, tách struct
+/// vì Tauri khoá state theo kiểu: gộp chung sẽ là hai stream chia nhau một khoá, và mở Logs sẽ đóng
+/// `/events` đang mở cho Dashboard.
+#[derive(Default)]
+pub struct LogsState {
+    open: Mutex<Option<CancellationToken>>,
+}
+
+impl LogsState {
+    pub fn keep(&self, token: CancellationToken) {
+        let mut slot = self.open.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(previous) = slot.replace(token) {
+            previous.cancel();
+        }
+    }
+
     pub fn stop(&self) {
         let mut slot = self.open.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(token) = slot.take() {
