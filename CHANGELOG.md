@@ -42,6 +42,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 
 ## [Unreleased]
 
+### Fixed
+
+- The MixEngine install link opens the Vietnamese page when the app language is Vietnamese, instead of always English.
+
 ## [0.0.31] - 2026-09-06
 
 ### Added
