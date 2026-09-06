@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { jobFor, poolBanner, versionKey } from "./runtimeState";
+import { formatInstalledAt, jobFor, poolBanner, versionKey } from "./runtimeState";
 import type { JobRow } from "./daemonState";
 
 describe("versionKey", () => {
@@ -18,6 +18,15 @@ describe("poolBanner", () => {
   });
   it("maps pool_not_running to an apply-next-start message, not an error", () => {
     expect(poolBanner("pool_not_running")).toBe("appliesNextStart");
+  });
+});
+
+describe("formatInstalledAt", () => {
+  it("turns an epoch-millisecond Timestamp into the machine's own date/time, not a raw number", () => {
+    const ms = Date.UTC(2026, 0, 15, 12, 0, 0);
+    const formatted = formatInstalledAt(ms);
+    expect(formatted).not.toBe(String(ms));
+    expect(formatted).toBe(new Date(ms).toLocaleString());
   });
 });
 

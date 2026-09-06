@@ -8,7 +8,7 @@ import * as api from "../../api";
 import type { PackageRelease } from "../../api/types/PackageRelease";
 import type { PackageSummary } from "../../api/types/PackageSummary";
 import { applyJob, type JobRow } from "../../daemonState";
-import { jobFor, versionKey } from "../../runtimeState";
+import { formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import styles from "./Packages.module.css";
 
@@ -88,7 +88,7 @@ export default function Packages() {
                 <td>
                   {row.package} {row.version}
                 </td>
-                <td>{row.installed_at}</td>
+                <td>{formatInstalledAt(row.installed_at)}</td>
                 <td>{row.services.length > 0 ? row.services.join(", ") : "—"}</td>
                 <td className={styles.actions}>
                   <Button onClick={() => void uninstall(row)} disabled={row.services.length > 0}>

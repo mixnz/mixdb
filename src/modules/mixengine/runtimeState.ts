@@ -27,3 +27,10 @@ export function poolBanner(outcome: PoolOutcome): PoolBanner {
 export function jobFor(jobs: JobRow[], jobId: number | undefined): JobRow | undefined {
   return jobId === undefined ? undefined : jobs.find((job) => job.id === jobId);
 }
+
+/** `RuntimeSummary.installed_at`/`PackageSummary.installed_at` là mili giây epoch (`Timestamp`),
+ *  không phải chuỗi — cùng cách `UpdateSection.tsx` đã vẽ `checked_at`: giờ theo múi giờ và định
+ *  dạng của chính máy người dùng, không phải một chuẩn cố định. */
+export function formatInstalledAt(ms: number): string {
+  return new Date(ms).toLocaleString();
+}

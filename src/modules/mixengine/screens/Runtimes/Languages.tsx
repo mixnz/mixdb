@@ -9,7 +9,7 @@ import * as api from "../../api";
 import type { RuntimeRelease } from "../../api/types/RuntimeRelease";
 import type { RuntimeSummary } from "../../api/types/RuntimeSummary";
 import { applyJob, type JobRow } from "../../daemonState";
-import { jobFor, versionKey } from "../../runtimeState";
+import { formatInstalledAt, jobFor, versionKey } from "../../runtimeState";
 import StaleBadge from "../../components/StaleBadge";
 import ExtensionsPanel from "./ExtensionsPanel";
 import styles from "./Languages.module.css";
@@ -118,7 +118,7 @@ export default function Languages() {
                     </button>
                   </td>
                   <td>{row.channel}</td>
-                  <td>{row.installed_at}</td>
+                  <td>{formatInstalledAt(row.installed_at)}</td>
                   <td>{row.default ? "✓" : "—"}</td>
                   <td className={styles.actions}>
                     {!row.default && (
