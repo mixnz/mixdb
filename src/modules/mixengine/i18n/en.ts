@@ -1,6 +1,18 @@
 export default {
   mixengine: {
     newTabTitle: "MixEngine",
+    sidebar: {
+      label: "MixEngine screens",
+      dashboard: "Dashboard",
+      sites: "Sites",
+      domains: "Domains & TLS",
+      runtimes: "Runtimes",
+      servicesDetail: "Services",
+      logs: "Logs",
+      blueprints: "Blueprints",
+      extensions: "Extensions",
+      settings: "Settings",
+    },
     // The three states in front of a daemon that is not answering. Each says what to do next,
     // because "error" alone leaves somebody guessing whether to install, to start, or to wait.
     gate: {

@@ -3,6 +3,18 @@ import type en from "./en";
 const vi: typeof en = {
   mixengine: {
     newTabTitle: "MixEngine",
+    sidebar: {
+      label: "Màn hình MixEngine",
+      dashboard: "Dashboard",
+      sites: "Sites",
+      domains: "Domains & TLS",
+      runtimes: "Runtimes",
+      servicesDetail: "Services",
+      logs: "Logs",
+      blueprints: "Blueprints",
+      extensions: "Extensions",
+      settings: "Settings",
+    },
     gate: {
       notRunning: "MixEngine đã cài nhưng chưa chạy.",
       notAnswering: "Daemon MixEngine không trả lời.",

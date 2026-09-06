@@ -20,3 +20,16 @@
   padding: 24px;
   text-align: center;
 }
+
+/* Sidebar + màn hình đang chọn, cạnh nhau. `.mixengine-root` là flex column ở trên nên phải nói lại
+   `flex-direction: row` ở đây thay vì đổi luật của root. */
+.mixengine-layout {
+  flex-direction: row;
+}
+
+.mixengine-screen {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
