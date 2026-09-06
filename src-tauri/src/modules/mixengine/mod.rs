@@ -5,6 +5,7 @@ pub mod commands;
 pub mod endpoint;
 pub mod events;
 pub mod health;
+pub mod open_in_mixdb;
 pub mod rpc;
 pub mod sse;
 pub mod state;
