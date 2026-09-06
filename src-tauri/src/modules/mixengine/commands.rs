@@ -80,6 +80,16 @@ pub fn mixengine_unwatch(state: State<'_, MixEngineState>) {
     state.stop();
 }
 
+/// Mọi thao tác đang chờ quyền quản trị, kèm câu mô tả daemon tự viết cho từng cái.
+///
+/// `daemon.status` chỉ mang một con số (`ElevationSummary.pending`); danh sách thật ở đây. Một tab
+/// mở ra khi đã có sẵn thao tác chờ không nhận `elevation_required` nào — sự kiện đó chỉ bắn lúc
+/// hàng đợi đổi — nên đây là đường duy nhất thấy chúng.
+#[tauri::command]
+pub async fn mixengine_elevation_status() -> Result<Value, AppError> {
+    rpc::call("elevation.status", json!({})).await
+}
+
 /// Cho phép cả lô thao tác đang chờ. Bật đúng một prompt của hệ điều hành.
 #[tauri::command]
 pub async fn mixengine_elevation_grant() -> Result<Value, AppError> {

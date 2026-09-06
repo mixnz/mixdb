@@ -26,6 +26,7 @@ const vi: typeof en = {
       stopAll: "Tắt tất cả",
       noServices: "Chưa có gì được dựng.",
       job: "Đang chạy",
+      elevationWaiting: "{{count}} thao tác đang chờ quyền quản trị",
     },
     elevation: {
       title: "MixEngine cần quyền quản trị",

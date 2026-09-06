@@ -1,6 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 
 import type { DaemonStatus } from "./api/types/DaemonStatus";
+import type { ElevationStatus } from "./api/types/ElevationStatus";
 import type { ServiceList } from "./api/types/ServiceList";
 
 /**
@@ -54,6 +55,17 @@ export function watch(onMessage: (raw: string) => void): Promise<void> {
 
 export function unwatch(): Promise<void> {
   return invoke("mixengine_unwatch");
+}
+
+/**
+ * Mọi thao tác đang chờ quyền quản trị, kèm câu daemon tự viết cho từng cái.
+ *
+ * `daemon.status` chỉ mang một con số. Một tab mở ra khi đã có sẵn thao tác chờ không nhận
+ * `elevation_required` nào — sự kiện đó chỉ bắn lúc hàng đợi đổi — nên đây là đường duy nhất thấy
+ * chúng.
+ */
+export function elevationStatus(): Promise<ElevationStatus> {
+  return invoke<ElevationStatus>("mixengine_elevation_status");
 }
 
 /** Cho phép cả lô thao tác đang chờ — đúng một prompt của hệ điều hành. */

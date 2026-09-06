@@ -72,3 +72,8 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* Hổ phách: có việc cần người quyết, nhưng chưa có gì hỏng. */
+.waiting {
+  color: var(--warning, #b45309);
+}

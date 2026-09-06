@@ -39,12 +39,15 @@ export default function ElevationDialog({
         <p>{t("mixengine.elevation.lead")}</p>
         <ul className={styles.ops}>
           {pending.map((op, at) => {
-            const { kind, detail } = describeOp(op);
+            const { kind, description, detail } = describeOp(op);
             return (
-              // Không có id ổn định nào trên một thao tác đang chờ; thứ tự là thứ daemon gửi và
-              // danh sách không sắp xếp lại, nên vị trí là khóa đúng ở đây.
+              // Vị trí là khoá: `PendingOp.id` có tồn tại, nhưng thứ tự là thứ daemon gửi và danh
+              // sách không sắp xếp lại, nên hai cách cho cùng một kết quả và cách này không phải
+              // tin vào một field.
               <li key={at}>
-                <strong>{kind}</strong>
+                {/* Câu của daemon đứng trước; tên kỹ thuật đứng sau, cho người muốn tra cứu nó. */}
+                {description && <div>{description}</div>}
+                <code className={styles.kind}>{kind}</code>
                 {detail && <pre className={styles.detail}>{detail}</pre>}
               </li>
             );

@@ -45,3 +45,8 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+.kind {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}

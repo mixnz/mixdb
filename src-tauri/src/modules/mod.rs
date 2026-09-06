@@ -215,6 +215,7 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_service_action,
         mixengine::commands::mixengine_watch,
         mixengine::commands::mixengine_unwatch,
+        mixengine::commands::mixengine_elevation_status,
         mixengine::commands::mixengine_elevation_grant,
         mixengine::commands::mixengine_elevation_drop,
     ]

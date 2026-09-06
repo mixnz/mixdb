@@ -36,6 +36,8 @@ export default function Dashboard() {
   const [status, setStatus] = useState<DaemonStatus | null>(null);
   const [rows, setRows] = useState<ServiceRow[]>([]);
   const [pending, setPending] = useState<unknown[] | null>(null);
+  /** Có bao nhiêu thao tác chờ quyền, theo `daemon.status`. Chỉ là con số; danh sách ở `elevation.status`. */
+  const [waiting, setWaiting] = useState(0);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [error, setError] = useState("");
   /** Service nào đang có một hành động bay, và là hành động nào. Khoá theo id. */
@@ -50,7 +52,24 @@ export default function Dashboard() {
       const [next, list] = await Promise.all([api.status(), api.services()]);
       setStatus(next);
       setRows(rowsFrom(list.services));
+      setWaiting(next.elevation?.pending ?? 0);
       setError("");
+    } catch (e) {
+      setError(errorMessage(t, e));
+    }
+  }, [t]);
+
+  /**
+   * Mở danh sách thao tác đang chờ quyền quản trị.
+   *
+   * Một tab mở ra khi hàng đợi đã có sẵn thứ gì đó **không** nhận `elevation_required` — sự kiện đó
+   * chỉ bắn lúc hàng đợi đổi. Nên con số ở `daemon.status` là thứ duy nhất nói rằng có gì đó đang
+   * chờ, và `elevation.status` là chỗ lấy danh sách để hiện ra.
+   */
+  const showWaiting = useCallback(async () => {
+    try {
+      const answer = await api.elevationStatus();
+      setPending(answer.pending);
     } catch (e) {
       setError(errorMessage(t, e));
     }
@@ -121,6 +140,14 @@ export default function Dashboard() {
           >
             {t("mixengine.dashboard.stopAll")}
           </button>
+          {/* Không tự bật hộp thoại lúc mở tab: một lô có thể nằm chờ nhiều ngày, và một modal bật
+              lên mỗi lần mở tab là thứ người ta học cách bấm bỏ mà không đọc. Một dòng bấm được
+              nói đúng điều cần nói. */}
+          {waiting > 0 && pending === null && (
+            <button className={styles.waiting} onClick={() => void showWaiting()}>
+              {t("mixengine.dashboard.elevationWaiting", { count: waiting })}
+            </button>
+          )}
         </header>
       )}
 
@@ -188,7 +215,16 @@ export default function Dashboard() {
 
       {rows.length === 0 && <p className={styles.empty}>{t("mixengine.dashboard.noServices")}</p>}
 
-      {pending && <ElevationDialog pending={pending} onClose={() => setPending(null)} />}
+      {pending && (
+        <ElevationDialog
+          pending={pending}
+          onClose={() => {
+            setPending(null);
+            // Sau grant hoặc drop, hàng đợi đã khác: đọc lại con số thay vì giữ cái cũ.
+            void reload();
+          }}
+        />
+      )}
     </div>
   );
 }

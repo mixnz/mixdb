@@ -28,6 +28,7 @@ export default {
       stopAll: "Stop all",
       noServices: "Nothing is set up yet.",
       job: "Working",
+      elevationWaiting: "{{count}} waiting for an administrator",
     },
     elevation: {
       title: "MixEngine needs an administrator",
