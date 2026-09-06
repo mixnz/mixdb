@@ -3,8 +3,12 @@
 Kế hoạch dựng phần UI để quản lý **MixEngine** ngay trong MixDB. Viết 2026-09-06, trước khi có
 dòng code nào. Năm pha; mỗi pha tự chạy được và để lại một tab dùng được.
 
-**Trạng thái: Pha 0 đã xong từ trước khi roadmap này được viết** — `91abac3`,
-`feat(db): save MixEngine handoffs as a keyring reference (#20)`, 2026-09-04. Pha 1–4 chưa bắt đầu.
+**Trạng thái: Pha 0 và Pha 1 đã xong. Pha 2–4 chưa bắt đầu.**
+
+- Pha 0 — `91abac3`, `feat(db): save MixEngine handoffs as a keyring reference (#20)`, 2026-09-04,
+  từ trước khi roadmap này được viết.
+- Pha 1 — nhánh `feat/mixengine-transport`, 2026-09-06. Spec:
+  [2026-09-06-mixengine-transport-design.md](../docs/superpowers/specs/2026-09-06-mixengine-transport-design.md).
 
 Nguồn phía MixEngine dùng để viết roadmap này:
 
@@ -146,9 +150,22 @@ không còn giữ"*, đó là việc mới, không phải nợ cũ.
 
 ---
 
-## Pha 1 — transport, và Dashboard
+## Pha 1 — transport, và Dashboard · **ĐÃ XONG**
 
 Pha nặng nhất, vì mọi thứ sau nó chỉ là thêm màn hình.
+
+Ba thứ chỉ lộ ra khi chạy với MixEngine thật, ghi lại để Pha 2 khỏi vấp lại:
+
+- **Fingerprint đi mượn (D1) khớp chính xác daemon thật.** Pipe sống trên máy dựng module này là
+  `\\.\pipe\mixengine.<SID>.dba23d063ef0c5a5`, và FNV-1a trên `<root>/run` ra đúng
+  `dba23d063ef0c5a5`. Rủi ro của D1 giờ là thứ đã đo.
+- **`PATH` một mình không đủ để tìm daemon.** MixEngine cài ở
+  `%LOCALAPPDATA%\Programs\MixEngine\` và **không** có trên `PATH`: installer Windows là bản
+  per-user, còn một app GUI mang theo `PATH` nó thừa kế lúc Explorer mở nó. Chỉ hỏi `PATH` là báo
+  "chưa cài MixEngine" cho một máy đã cài.
+- **`config.toml` của MixEngine có `[daemon] ipc_path`**, và nó thắng địa chỉ suy ra. Một máy đặt
+  khoá đó mà client vẫn dial chỗ suy ra sẽ báo "không có daemon nào trả lời" trong khi daemon đang
+  chạy ngay đó. `daemon-and-ipc.md` không nói điều này — chỉ file cấu hình mẫu nói.
 
 ### Transport
 
