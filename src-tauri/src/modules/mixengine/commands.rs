@@ -210,3 +210,75 @@ pub async fn mixengine_certs(domain: Option<String>) -> Result<Value, AppError> 
     let site = domain.map(|d| json!({ "domain": d }));
     rpc::call("cert.issue", json!({ "site": site })).await
 }
+
+/// `filter` đúng hình `RuntimeFilter` — bỏ trống (`{}`) thấy cả bốn kind.
+#[tauri::command]
+pub async fn mixengine_runtime_list_installed(filter: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.list_installed", filter).await
+}
+
+/// `filter` đúng hình `RuntimeFilter`. `RuntimeCatalogue.stale` phải được frontend vẽ ra, không bỏ
+/// qua — xem D3.
+#[tauri::command]
+pub async fn mixengine_runtime_list_available(filter: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.list_available", filter).await
+}
+
+/// `target` đúng hình `RuntimeTarget { kind, version }`. Trả `JobSummary` — id của nó là thứ frontend
+/// theo dõi qua stream `/events` đã mở sẵn.
+#[tauri::command]
+pub async fn mixengine_runtime_install(target: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.install", target).await
+}
+
+/// `params` đúng hình `RuntimeUninstall { kind, version, force? }`.
+#[tauri::command]
+pub async fn mixengine_runtime_uninstall(params: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.uninstall", params).await
+}
+
+/// `target` đúng hình `RuntimeTarget`.
+#[tauri::command]
+pub async fn mixengine_runtime_set_default(target: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.set_default", target).await
+}
+
+/// `target` đúng hình `RuntimeTarget` — một bản PHP, trả `RuntimeExtension[]`.
+#[tauri::command]
+pub async fn mixengine_runtime_list_extensions(target: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.list_extensions", target).await
+}
+
+/// `choice` đúng hình `ExtensionChoice { kind, version, name, enabled }`. Trả `ExtensionChange
+/// { extension, pool }` — `pool` là thứ frontend đọc để quyết định banner nào hiện.
+#[tauri::command]
+pub async fn mixengine_runtime_set_extension(choice: Value) -> Result<Value, AppError> {
+    rpc::call("runtime.set_extension", choice).await
+}
+
+/// `filter` đúng hình `PackageFilter { package? }`.
+#[tauri::command]
+pub async fn mixengine_package_list(filter: Value) -> Result<Value, AppError> {
+    rpc::call("package.list", filter).await
+}
+
+/// `filter` đúng hình `PackageFilter`. `PackageCatalogue.stale` phải được vẽ, cùng component với
+/// `RuntimeCatalogue.stale` — D3.
+#[tauri::command]
+pub async fn mixengine_package_list_available(filter: Value) -> Result<Value, AppError> {
+    rpc::call("package.list_available", filter).await
+}
+
+/// `target` đúng hình `PackageTarget { package, version }`. Trả `JobSummary`, cùng cách theo dõi qua
+/// stream như `runtime.install`.
+#[tauri::command]
+pub async fn mixengine_package_install(target: Value) -> Result<Value, AppError> {
+    rpc::call("package.install", target).await
+}
+
+/// `target` đúng hình `PackageTarget`. **Không có `force`** — refuse vì `services` không rỗng là
+/// chốt, không có tham số nào vượt qua nó (D6).
+#[tauri::command]
+pub async fn mixengine_package_uninstall(target: Value) -> Result<Value, AppError> {
+    rpc::call("package.uninstall", target).await
+}
