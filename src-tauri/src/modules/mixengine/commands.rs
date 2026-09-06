@@ -101,3 +101,43 @@ pub async fn mixengine_elevation_grant() -> Result<Value, AppError> {
 pub async fn mixengine_elevation_drop() -> Result<Value, AppError> {
     rpc::call("elevation.drop", json!({})).await
 }
+
+/// `project` lọc theo tên; bỏ trống thấy mọi site trong home.
+#[tauri::command]
+pub async fn mixengine_sites(project: Option<String>) -> Result<Value, AppError> {
+    let params = match project {
+        Some(name) => json!({ "project": { "name": name } }),
+        None => json!({}),
+    };
+    rpc::call("site.list", params).await
+}
+
+/// Luôn tra theo domain — MixDB không dùng `SiteRef::Path`, chỉ CLI đứng trong thư mục mới cần nó.
+#[tauri::command]
+pub async fn mixengine_site(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.show", json!({ "site": { "domain": domain } })).await
+}
+
+/// `params` đã đúng hình `SiteCreate` từ frontend — không giải vào struct Rust riêng, đó sẽ là bản
+/// chép tay thứ hai của một hợp đồng đã gõ đúng ở TypeScript (spec Pha 2, mục 5).
+#[tauri::command]
+pub async fn mixengine_site_create(params: Value) -> Result<Value, AppError> {
+    rpc::call("site.create", params).await
+}
+
+/// `params` đúng hình `SiteUpdate`.
+#[tauri::command]
+pub async fn mixengine_site_update(params: Value) -> Result<Value, AppError> {
+    rpc::call("site.update", params).await
+}
+
+/// `params` đúng hình `SiteShare`.
+#[tauri::command]
+pub async fn mixengine_site_share(params: Value) -> Result<Value, AppError> {
+    rpc::call("site.share", params).await
+}
+
+#[tauri::command]
+pub async fn mixengine_site_unshare(domain: String) -> Result<Value, AppError> {
+    rpc::call("site.unshare", json!({ "site": { "domain": domain } })).await
+}
