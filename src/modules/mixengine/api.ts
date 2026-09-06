@@ -46,6 +46,13 @@ import type { BlueprintCapture } from "./api/types/BlueprintCapture";
 import type { BlueprintImport } from "./api/types/BlueprintImport";
 import type { BlueprintApply } from "./api/types/BlueprintApply";
 import type { BlueprintApplyResponse } from "./api/types/BlueprintApplyResponse";
+import type { InstalledExtensions } from "./api/types/InstalledExtensions";
+import type { ExtensionCatalogue } from "./api/types/ExtensionCatalogue";
+import type { ExtensionPlanRequest } from "./api/types/ExtensionPlanRequest";
+import type { ExtensionPlan } from "./api/types/ExtensionPlan";
+import type { ExtensionInstall } from "./api/types/ExtensionInstall";
+import type { ExtensionUninstall } from "./api/types/ExtensionUninstall";
+import type { ExtensionRemoval } from "./api/types/ExtensionRemoval";
 
 /**
  * Chỗ duy nhất module này gọi `invoke()`.
@@ -341,4 +348,35 @@ export function jobLogsWatch(
 /** Cùng state phía Rust với `logsUnwatch` — đóng bất cứ stream log nào đang mở, service hay job. */
 export function jobLogsUnwatch(): Promise<void> {
   return invoke("mixengine_logs_unwatch");
+}
+
+export function extensionsInstalled(): Promise<InstalledExtensions> {
+  return invoke<InstalledExtensions>("mixengine_extension_list_installed");
+}
+
+export function extensionsAvailable(): Promise<ExtensionCatalogue> {
+  return invoke<ExtensionCatalogue>("mixengine_extension_list_available");
+}
+
+/** Bước duy nhất trước khi cài — không có `extensionInspect`, xem Quyết định D2 spec. */
+export function extensionPlan(input: ExtensionPlanRequest): Promise<ExtensionPlan> {
+  return invoke<ExtensionPlan>("mixengine_extension_plan", { params: input });
+}
+
+/** `input.consent` phải trích nguyên từ `ExtensionPlan` vừa nhận — xem Quyết định D3 spec. */
+export function extensionInstall(input: ExtensionInstall): Promise<unknown> {
+  return invoke("mixengine_extension_install", { params: input });
+}
+
+export function extensionUninstall(input: ExtensionUninstall): Promise<ExtensionRemoval> {
+  return invoke<ExtensionRemoval>("mixengine_extension_uninstall", { params: input });
+}
+
+/** Gọi `extension.*`, không phải `service.*` — xem Global Constraints. */
+export function extensionStart(id: string): Promise<unknown> {
+  return invoke("mixengine_extension_start", { id });
+}
+
+export function extensionStop(id: string): Promise<unknown> {
+  return invoke("mixengine_extension_stop", { id });
 }
