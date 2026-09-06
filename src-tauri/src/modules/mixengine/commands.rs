@@ -148,6 +148,33 @@ pub async fn mixengine_projects() -> Result<Value, AppError> {
     rpc::call("project.list", json!({})).await
 }
 
+/// Tra một project theo tên, kèm pin **hiệu lực** (file thắng row).
+#[tauri::command]
+pub async fn mixengine_project_show(name: String) -> Result<Value, AppError> {
+    rpc::call("project.show", json!({ "project": { "name": name } })).await
+}
+
+/// `params` đúng hình `ProjectCreate` từ frontend — không giải vào struct Rust riêng, cùng lý do
+/// `mixengine_site_create` đã theo (Pha 2 spec, mục 5).
+#[tauri::command]
+pub async fn mixengine_project_create(params: Value) -> Result<Value, AppError> {
+    rpc::call("project.create", params).await
+}
+
+/// `params` đúng hình `ProjectUpdate`. `pins` thay thế toàn bộ — frontend gửi lại mọi pin hiện có
+/// cộng thay đổi, không gửi mỗi pin mới.
+#[tauri::command]
+pub async fn mixengine_project_update(params: Value) -> Result<Value, AppError> {
+    rpc::call("project.update", params).await
+}
+
+/// Xoá đăng ký — thư mục và `mixengine.toml` được giữ nguyên (`ProjectRemoval.root_kept`/
+/// `manifest_kept`), UI phải nói rõ điều đó ở hộp thoại xác nhận.
+#[tauri::command]
+pub async fn mixengine_project_delete(name: String) -> Result<Value, AppError> {
+    rpc::call("project.delete", json!({ "project": { "name": name } })).await
+}
+
 /// `domain.dns_status` là cả `domain.list` lẫn chẩn đoán một tên — bỏ trống `domain` thấy mọi tên.
 #[tauri::command]
 pub async fn mixengine_domains(domain: Option<String>) -> Result<Value, AppError> {
