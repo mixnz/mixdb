@@ -86,7 +86,7 @@ export function describePlanAction(
     case "create_database":
       return t(`${base}.create_database`, { database: action.database, user: action.user });
     case "create_site":
-      return t(`${base}.create_site`, { kind: action.kind, docRoot: action.doc_root });
+      return t(`${base}.create_site`, { kind: action.kind.kind, docRoot: action.doc_root });
     case "add_domain":
       return t(`${base}.add_domain`, { domain: action.domain });
     case "issue_certificate":

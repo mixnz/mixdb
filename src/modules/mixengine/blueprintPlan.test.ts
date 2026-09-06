@@ -83,7 +83,7 @@ describe("canApply", () => {
 
   it("is false when any step is blocked or unsupported, answered or not", () => {
     const blocked = step({
-      action: { action: "create_site", kind: "static", doc_root: "", https: true },
+      action: { action: "create_site", kind: { kind: "static" }, doc_root: "", https: true },
       disposition: { disposition: "blocked", reason: "no web server" },
     });
     expect(canApply([blocked], {})).toBe(false);
