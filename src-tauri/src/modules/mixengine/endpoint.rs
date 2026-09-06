@@ -10,8 +10,13 @@
 
 use std::path::{Path, PathBuf};
 
-/// Mọi thứ đứng trước phần nhận dạng daemon nào. Một hằng số, không `#[cfg]`: test đọc nó ở cả
-/// hai nhánh, và một hằng số chỉ tồn tại trên Windows là một `unused` ở nơi khác.
+/// Mọi thứ đứng trước phần nhận dạng daemon nào.
+///
+/// `any(windows, test)` chứ không phải `windows` trần: chỉ `address()` của Windows đọc nó, nhưng
+/// test đọc nó ở cả hai nhánh để ghim hình dạng tên pipe. Thiếu `test` thì bản lib trên Linux mang
+/// một hằng số không ai dùng và `clippy -D warnings` của CI đổ vì nó — thứ chỉ CI thấy, vì trên
+/// Windows `address()` dùng nó nên nó không bao giờ là dead code ở đây.
+#[cfg(any(windows, test))]
 pub const PIPE_PREFIX: &str = r"\\.\pipe\mixengine.";
 
 /// Thư mục gốc của MixEngine trên máy này.
@@ -74,6 +79,10 @@ pub fn ipc_path_in(config: &str) -> Option<String> {
 ///
 /// FNV-1a, viết ra chứ không kéo thêm crate: đây là một cái tên, không phải một lớp phòng thủ.
 /// Nó chỉ cần khác nhau giữa hai home và giống nhau qua hai lần khởi động của cùng một home.
+///
+/// `any(windows, test)` vì lý do ở [`PIPE_PREFIX`]: unix không có fingerprint nào để tính, nhưng
+/// test ghim giá trị của nó trên mọi nền tảng.
+#[cfg(any(windows, test))]
 pub fn fingerprint(run: &Path) -> u64 {
     const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const PRIME: u64 = 0x0000_0100_0000_01b3;
