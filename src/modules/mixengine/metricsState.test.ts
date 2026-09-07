@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DAEMON_SUBJECT,
   formatBytes,
+  formatPercent,
   metricsSubjectFor,
   parseMetricsFrame,
   readingFor,
@@ -72,5 +73,19 @@ describe("formatBytes", () => {
     expect(formatBytes(1024)).toBe("1 KB");
     expect(formatBytes(1536)).toBe("1.5 KB");
     expect(formatBytes(1024 * 1024)).toBe("1 MB");
+  });
+});
+
+describe("formatPercent", () => {
+  it("always shows exactly four decimal digits", () => {
+    expect(formatPercent(0)).toBe("0.0000%");
+    expect(formatPercent(1.5)).toBe("1.5000%");
+    expect(formatPercent(2.123456)).toBe("2.1235%");
+  });
+
+  /* 250 là hai lõi rưỡi (MetricsSample.cpu_percent doc-comment) — vẫn giữ nguyên bốn chữ số thập
+     phân, không cắt về số nguyên chỉ vì giá trị lớn hơn 100. */
+  it("keeps the format for a reading over one core", () => {
+    expect(formatPercent(250)).toBe("250.0000%");
   });
 });

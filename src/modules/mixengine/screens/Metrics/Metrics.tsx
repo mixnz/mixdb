@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import ErrorBanner from "../../../../components/ErrorBanner";
+import Select from "../../../../components/Select";
 import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
@@ -52,17 +53,16 @@ export default function Metrics({ active }: { active: boolean }) {
       {error !== "" && <ErrorBanner message={error} onDismiss={() => setError("")} />}
 
       <header className={styles.header}>
-        <label className={styles.field}>
-          {t("mixengine.metrics.subject")}
-          <select value={subject} onChange={(e) => setSubject(e.target.value)}>
-            <option value={DAEMON_SUBJECT}>{t("mixengine.metrics.daemon")}</option>
-            {subjects.map((s) => (
-              <option key={s} value={s}>
-                {s.replace(/^service:/, "")}
-              </option>
-            ))}
-          </select>
-        </label>
+        <span>{t("mixengine.metrics.subject")}</span>
+        <Select
+          value={subject}
+          onChange={setSubject}
+          searchable
+          options={[
+            { value: DAEMON_SUBJECT, label: t("mixengine.metrics.daemon") },
+            ...subjects.map((s) => ({ value: s, label: s.replace(/^service:/, "") })),
+          ]}
+        />
       </header>
 
       {minutes.length === 0 ? (

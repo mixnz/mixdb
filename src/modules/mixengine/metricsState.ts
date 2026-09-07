@@ -54,3 +54,9 @@ export function formatBytes(bytes: number): string {
   const shown = unit === 0 ? String(size) : size.toFixed(1).replace(/\.0$/, "");
   return `${shown} ${BYTE_UNITS[unit]}`;
 }
+
+/** `cpu_percent` làm tròn 4 chữ số thập phân — `250` (hai lõi rưỡi) đọc thành `"250.0000%"`, giữ
+ *  đúng độ chính xác daemon gửi thay vì cắt về số nguyên. */
+export function formatPercent(value: number): string {
+  return `${value.toFixed(4)}%`;
+}

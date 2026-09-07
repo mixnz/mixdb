@@ -22,6 +22,7 @@ import type { MetricsFrame } from "../../api/types/MetricsFrame";
 import {
   DAEMON_SUBJECT,
   formatBytes,
+  formatPercent,
   metricsSubjectFor,
   parseMetricsFrame,
   readingFor,
@@ -232,34 +233,6 @@ export default function Dashboard({ active }: { active: boolean }) {
         <header className={styles.header}>
           <strong>MixEngine {status.version}</strong>
           <span className={styles.home}>{status.home}</span>
-          {/* Daemon không có `ServiceRow` — vẽ riêng khỏi bảng service, không chèn vào `rows`. */}
-          {(() => {
-            const daemon = readingFor(frame, DAEMON_SUBJECT);
-            return daemon && (
-              <span className={styles.home}>
-                {t("mixengine.dashboard.daemonUsage", {
-                  cpu: daemon.cpu_percent === null ? "—" : `${daemon.cpu_percent}%`,
-                  rss: formatBytes(daemon.rss_bytes),
-                })}
-              </span>
-            );
-          })()}
-          {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
-          <button
-            onClick={() =>
-              void Promise.all(
-                rows.filter((row) => row.state === "running").map((row) => act(row.id, "stop")),
-              )
-            }
-            disabled={
-              rows.every((row) => row.state !== "running") || Object.keys(busy).length > 0
-            }
-          >
-            {t("mixengine.dashboard.stopAll")}
-          </button>
-          <button onClick={() => setCreating(true)}>
-            {t("mixengine.serviceForm.newService")}
-          </button>
           {/* Không tự bật hộp thoại lúc mở tab: một lô có thể nằm chờ nhiều ngày, và một modal bật
               lên mỗi lần mở tab là thứ người ta học cách bấm bỏ mà không đọc. Một dòng bấm được
               nói đúng điều cần nói. */}
@@ -268,8 +241,42 @@ export default function Dashboard({ active }: { active: boolean }) {
               {t("mixengine.dashboard.elevationWaiting", { count: waiting })}
             </button>
           )}
+          {/* Daemon không có `ServiceRow` — vẽ riêng khỏi bảng service, không chèn vào `rows`.
+              `.daemonUsage` đẩy nó sát bên phải header. */}
+          {(() => {
+            const daemon = readingFor(frame, DAEMON_SUBJECT);
+            return (
+              daemon && (
+                <span className={`${styles.home} ${styles.daemonUsage}`}>
+                  {t("mixengine.dashboard.daemonUsage", {
+                    cpu: daemon.cpu_percent === null ? "—" : formatPercent(daemon.cpu_percent),
+                    rss: formatBytes(daemon.rss_bytes),
+                  })}
+                </span>
+              )
+            );
+          })()}
         </header>
       )}
+
+      {/* Hàng riêng, xuống dưới header, hai nút sát bên phải — tách khỏi header để header không dài
+          thêm mỗi lần một field trạng thái mới được thêm vào. */}
+      <div className={styles.headerActions}>
+        <div className={styles.headerButtons}>
+          {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
+          <button
+            onClick={() =>
+              void Promise.all(
+                rows.filter((row) => row.state === "running").map((row) => act(row.id, "stop")),
+              )
+            }
+            disabled={rows.every((row) => row.state !== "running") || Object.keys(busy).length > 0}
+          >
+            {t("mixengine.dashboard.stopAll")}
+          </button>
+          <button onClick={() => setCreating(true)}>{t("mixengine.serviceForm.newService")}</button>
+        </div>
+      </div>
 
       {jobs.length > 0 && (
         <ul className={styles.jobs}>
@@ -327,7 +334,11 @@ export default function Dashboard({ active }: { active: boolean }) {
                 {/* Vắng mặt trong frame (chưa có stream, hay service chưa lọt vào lần đo) là "—",
                     không phải 0% — một service rảnh và một service không đo được là hai câu khác
                     nhau. `cpu_percent: null` trên chính sample cũng vẽ "—" vì cùng lý do đó. */}
-                <td>{reading === null || reading.cpu_percent === null ? "—" : `${reading.cpu_percent}%`}</td>
+                <td>
+                  {reading === null || reading.cpu_percent === null
+                    ? "—"
+                    : formatPercent(reading.cpu_percent)}
+                </td>
                 <td>{reading === null ? "—" : formatBytes(reading.rss_bytes)}</td>
                 <td className={styles.actions}>
                   {/* Nghỉ thì là một cái đèn báo, chạm vào thì là một cái nút. Màu lúc nghỉ nói

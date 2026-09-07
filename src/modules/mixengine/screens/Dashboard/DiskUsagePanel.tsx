@@ -52,15 +52,17 @@ export default function DiskUsagePanel({ disk, refreshing, onRefresh, onCleanup 
             time: new Date(disk.measured_at).toLocaleTimeString(),
           })}
         </span>
-        <button onClick={onRefresh} disabled={refreshing}>
-          {t("mixengine.dashboard.diskUsage.refresh")}
-        </button>
-        <button
-          onClick={onCleanup}
-          disabled={!disk.categories.some((category) => isCleanupReclaimable(category))}
-        >
-          {t("mixengine.dashboard.diskUsage.cleanup")}
-        </button>
+        <div className={styles.headerButtons}>
+          <button onClick={onRefresh} disabled={refreshing}>
+            {t("mixengine.dashboard.diskUsage.refresh")}
+          </button>
+          <button
+            onClick={onCleanup}
+            disabled={!disk.categories.some((category) => isCleanupReclaimable(category))}
+          >
+            {t("mixengine.dashboard.diskUsage.cleanup")}
+          </button>
+        </div>
       </header>
 
       <ul className={styles.categories}>

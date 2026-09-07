@@ -99,9 +99,21 @@ export default function UpdatesSection({ onError }: { onError: (message: string)
         </p>
       )}
 
-      <Button onClick={() => void check()} disabled={checking}>
-        {t("mixengine.settings.updates.check")}
-      </Button>
+      <div className={styles.row}>
+        <Button onClick={() => void check()} disabled={checking}>
+          {checking ? t("mixengine.settings.updates.checking") : t("mixengine.settings.updates.check")}
+        </Button>
+        {/* Phản hồi cho lần bấm vừa rồi — không có dòng này, một lần kiểm tra không tìm thấy gì mới
+            khiến màn hình đứng y nguyên và trông như cái nút không làm gì cả. */}
+        <span className={styles.muted}>
+          {status.checked_at === null || status.checked_at === undefined
+            ? t("mixengine.settings.updates.neverChecked")
+            : t("mixengine.settings.updates.checkedAt", {
+                time: new Date(status.checked_at).toLocaleTimeString(),
+              })}
+          {status.stale && ` ${t("mixengine.settings.updates.stale")}`}
+        </span>
+      </div>
     </section>
   );
 }

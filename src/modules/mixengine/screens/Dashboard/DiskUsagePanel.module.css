@@ -23,6 +23,12 @@
   font-size: var(--text-sm);
 }
 
+.headerButtons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .categories {
   display: flex;
   flex-direction: column;
