@@ -6,20 +6,7 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { UpdateStatus } from "../../api/types/UpdateStatus";
 import styles from "./Settings.module.css";
-
-/** Chấm chạy `""` → `"."` → `".."` → `"..."`, lặp lại — báo còn sống trong lúc `applying`. */
-function useRunningDots(active: boolean): string {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!active) {
-      setCount(0);
-      return;
-    }
-    const id = window.setInterval(() => setCount((n) => (n + 1) % 4), 450);
-    return () => window.clearInterval(id);
-  }, [active]);
-  return ".".repeat(count);
-}
+import { useRunningDots } from "./useRunningDots";
 
 /**
  * `update.status`/`check`/`decide`/`apply`.

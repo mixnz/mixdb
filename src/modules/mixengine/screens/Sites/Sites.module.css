@@ -48,3 +48,9 @@
   gap: 6px;
   font-family: var(--font-mono);
 }
+
+/* Chữ nhỏ sau dấu ✓ ở cột HTTPS: site này chuyển mọi địa chỉ HTTP sang HTTPS (T98). */
+.redirect {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

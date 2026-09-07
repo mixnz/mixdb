@@ -63,6 +63,11 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
     new Set(editing ? initial.services.map((s) => s.service) : []),
   );
   const [https, setHttps] = useState(editing ? initial.site.https : false);
+  /** T98. `?? false` vì một daemon build trước T98 không gửi trường này. Chỉ có nghĩa khi `https`
+   *  bật — daemon từ chối `true` bên cạnh `https: false`, nên UI không bao giờ gửi tổ hợp đó. */
+  const [httpsRedirect, setHttpsRedirect] = useState(
+    editing ? (initial.site.https_redirect ?? false) : false,
+  );
   const [acceptRiskyTld, setAcceptRiskyTld] = useState(false);
   const [enabled, setEnabled] = useState(editing ? initial.site.state === "enabled" : true);
 
@@ -179,6 +184,7 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
           kind: kindPayload(),
           services: [...selectedServices],
           https,
+          https_redirect: https && httpsRedirect,
           state: enabled ? "enabled" : "disabled",
           accept_risky_tld: acceptRiskyTld,
         });
@@ -190,6 +196,7 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
           kind: kindPayload(),
           services: [...selectedServices].length > 0 ? [...selectedServices] : null,
           https,
+          https_redirect: https && httpsRedirect,
           accept_risky_tld: acceptRiskyTld,
         });
       }
@@ -361,9 +368,23 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
                 type="checkbox"
                 checked={https}
                 disabled={saving}
-                onChange={(e) => setHttps(e.target.checked)}
+                onChange={(e) => {
+                  setHttps(e.target.checked);
+                  // Bỏ HTTPS là bỏ luôn redirect: không có địa chỉ HTTPS nào để chuyển tới.
+                  if (!e.target.checked) setHttpsRedirect(false);
+                }}
               />
               {t("mixengine.sites.form.https")}
+            </label>
+
+            <label className={styles.checkbox}>
+              <input
+                type="checkbox"
+                checked={https && httpsRedirect}
+                disabled={saving || !https}
+                onChange={(e) => setHttpsRedirect(e.target.checked)}
+              />
+              {t("mixengine.sites.form.httpsRedirect")}
             </label>
 
             {editing && (

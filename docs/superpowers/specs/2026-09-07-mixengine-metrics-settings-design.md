@@ -255,13 +255,34 @@ ba lần trong roadmap giờ áp lần thứ tư. Checkbox `keep_home` đổi l�
 với giá trị mới) trước khi cho bấm nút Gỡ thật — không suy luận phần nào đổi khi tick, để daemon tự
 nói.
 
-Bấm Gỡ → `daemon.uninstall(UninstallQuery { keep_home, grant: true })`, một job **tự nó bật đúng một
-prompt** (không qua `elevation.status` như `doctor_repair` — field `grant` ở đây gộp thẳng vào job,
-`UninstallReport` không có field `granting` vì lý do đó, đọc rõ trong doc-comment của
-`UninstallReport`). Khi `keep_home: false`, **daemon tự thoát sau khi job ghi xong kết quả** — client
-phải chờ kết nối đóng (cùng gate "chết là một trạng thái đọc được" MixEngineTab đã có từ Pha 1,
-`presence !== "running"`) rồi mới coi là xong, không dựa vào job `state: "succeeded"` một mình vì đó
-là thời điểm daemon *sắp* thoát chứ chưa chắc đã thoát.
+Bấm Gỡ → mở `UninstallConfirmDialog` (T89 — cập nhật sau khi build): nút "Gỡ MixEngine" không gọi
+`daemon.uninstall` thẳng nữa, nó chỉ mở dialog; `daemon.uninstall(UninstallQuery { keep_home, grant:
+true })` chỉ chạy khi người dùng bấm "Gỡ" **trong dialog đó**. Lý do đổi so với thiết kế ban đầu ở
+trên: `daemon.uninstall` vẫn là một job **tự nó bật đúng một prompt** (không qua `elevation.status`
+như `doctor_repair` — field `grant` ở đây gộp thẳng vào job, `UninstallReport` không có field
+`granting` vì lý do đó, đọc rõ trong doc-comment của `UninstallReport`), nhưng để cú click cuối cùng
+trước khi hệ điều hành hỏi mật khẩu luôn là một cú click có chủ đích trong app — không phải "click lần
+hai trên cùng một nút đổi tên" như bản đầu (dễ nhầm với một nút bị đơ, cùng lớp lỗi UAC-bật-sớm CA đã
+gặp trước `mixengine_ca_repair`'s fix). `UninstallConfirmDialog` không đọc lại gì từ daemon — nó
+không có `PendingOp[]` nào để vẽ như `ElevationDialog`, bảng residue phía sau nó đã là phần "xem
+trước", dialog chỉ còn việc chặn cú click.
+
+Khi `keep_home: false`, **daemon tự thoát sau khi job ghi xong kết quả**. `pollJob` không tự xác
+minh lại bằng cách hỏi `presence` — `keep_home` là cờ chính request đã gửi, nên biết chắc daemon có
+tự thoát hay không mà không cần đoán qua trạng thái máy đang chạy (một bản trước có tự chờ `presence`
+rời `"running"` tối đa 10 lần trước khi quyết định, nhưng nếu nó không đổi kịp trong 10 giây đó thì
+kẹt luôn ở Settings dù daemon *sẽ* rời). Khi `keep_home: false`, `pollJob` gọi thẳng `onUninstalled()`
+— cùng cơ chế `onApplied` của `UpdatesSection`/`update.apply`
+([MixEngineTab.pollUntilDaemonLeaves](../../../src/modules/mixengine/MixEngineTab.tsx)) — ngay khi
+job báo `state` khác `"running"`, không dựa vào job `state: "succeeded"` một mình vì đó là thời điểm
+daemon *sắp* thoát chứ chưa chắc đã thoát; `pollUntilDaemonLeaves` ở `MixEngineTab` mới là nơi chờ
+`presence !== "running"` thật sự rồi để gate trên cùng tự vẽ đúng màn. `pollJob` cũng phải bắt lỗi RPC
+của chính `jobStatus` trong đúng khoảnh khắc daemon thoát — kết nối rơi giữa chừng dễ bị transport báo
+thành exception, và khi `keep_home: false` đó là dấu hiệu daemon đã rời (gọi `onUninstalled()` ngay)
+chứ không phải một lỗi thật; chỉ khi `keep_home: true` (nơi daemon không có lý do gì để mất kết nối)
+mới coi đó là lỗi thật và báo `onError`. Không bắt lỗi đó thì polling chết lặng lẽ và màn hình kẹt mãi
+ở "Đang gỡ…" (cùng lớp lỗi 53387ea đã fix cho `update.apply`, dù cơ chế cụ thể khác — 53387ea không
+có gì poll cả, ở đây có poll nhưng chết ở lần lỗi đầu tiên).
 
 ### Diagnostics bundle
 
@@ -365,7 +386,10 @@ Pha 3 gộp vì cùng namespace.
 
 Một câu hỏi thật còn treo, và hai câu hỏi cũ của roadmap spec này không đóng lại:
 
-1. **"Default web server"** (T97) — thiết kế đã có, code đã merge vào `master`
+1. **"Default web server"** (T97) — **đã đóng 2026-09-08**: `v0.0.6` phát hành kèm
+   `service.set_front_end`/`ServiceSummary.role`, bindings đã re-vendor lên `0.0.6` bằng
+   `npm run bindings`, và `FrontEndSection.tsx` nối hàng này theo đúng hợp đồng dưới đây. Ghi chú gốc
+   giữ lại làm bối cảnh — thiết kế đã có, code đã merge vào `master`
    (commit `d6346a1`, PR [#106](https://github.com/mixnz/mixengine/pull/106)), nhưng **chưa lên một
    bản release ký nào** tính đến hôm nay (`v0.0.4` mới chỉ có ADR 0026, chưa có hằng RPC/type). Không
    hand-type ba kiểu thiếu để né việc chờ — xem D0. MixEngine đã xác nhận nguyên hợp đồng cho lần

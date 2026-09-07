@@ -21,6 +21,12 @@
   margin: 0;
 }
 
+/* Khoảng cách trong một section do `gap` của nó quyết định, không phải margin 1em mặc định của
+   `<p>` — hai `<p>` liền nhau (General, Autostart, Updates, Uninstall) từng cách nhau 8px cộng 2em. */
+.section p {
+  margin: 0;
+}
+
 .row {
   display: flex;
   align-items: center;

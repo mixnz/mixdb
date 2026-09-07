@@ -37,6 +37,7 @@ import type { PackageTarget } from "./api/types/PackageTarget";
 import type { PackageRemoval } from "./api/types/PackageRemoval";
 import type { ServiceLimitsReport } from "./api/types/ServiceLimitsReport";
 import type { ResourceLimits } from "./api/types/ResourceLimits";
+import type { FrontEndSwitch } from "./api/types/FrontEndSwitch";
 import type { ServiceIdleSet } from "./api/types/ServiceIdleSet";
 import type { ServiceCreate } from "./api/types/ServiceCreate";
 import type { ServiceCreation } from "./api/types/ServiceCreation";
@@ -138,9 +139,13 @@ export function elevationStatus(): Promise<ElevationStatus> {
   return invoke<ElevationStatus>("mixengine_elevation_status");
 }
 
-/** Cho phép cả lô thao tác đang chờ — đúng một prompt của hệ điều hành. */
-export function elevationGrant(): Promise<unknown> {
-  return invoke("mixengine_elevation_grant");
+/** Cho phép cả lô thao tác đang chờ — đúng một prompt của hệ điều hành.
+ *
+ *  **Trả về một job, không phải kết quả.** Daemon tạo hàng job rồi trả lời ngay; prompt bật lên
+ *  *sau đó*, bên trong job. Ai gọi phải theo dõi qua `jobStatus` tới khi job xong — `result` của
+ *  job là một `GrantOutcome` (`completed`/`declined`/`unavailable`). */
+export function elevationGrant(): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_elevation_grant");
 }
 
 /** Bỏ cả lô đi. Từ chối là một kết cục bình thường, không phải một lỗi. */
@@ -299,6 +304,12 @@ export function serviceIdle(service: string): Promise<unknown> {
 
 export function serviceSetIdle(params: ServiceIdleSet): Promise<unknown> {
   return invoke("mixengine_service_set_idle", { params });
+}
+
+/** Đổi web server mặc định — một job (theo dõi qua `jobStatus`), kết quả là `FrontEndReport`.
+ *  Server đang active không có method đọc riêng: đọc `ServiceSummary.role` từ `services()`. */
+export function serviceSetFrontEnd(params: FrontEndSwitch): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_service_set_front_end", { params });
 }
 
 /** `version` là bắt buộc — không có `service.resolve` nào chọn hộ, xem doc của `ServiceCreate`. */

@@ -77,11 +77,13 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
     };
   }, []);
 
-  /* `update.apply` tự kết thúc daemon đang phục vụ request đó sau khi trả lời — không có gì ở tầng
-     này khởi động lại nó giùm người dùng (đúng luật "không tự khởi động daemon" ở đầu file). Settings
-     gọi `pollUntilDaemonLeaves` ngay khi `update.apply` xong để nghe đúng lúc `presence` rời khỏi
-     `"running"`, rồi để gate phía trên tự vẽ màn đúng — có nút Start nếu daemon chưa tự lên lại kiểu
-     nào đó, hoặc daemon bình thường nếu nó đã lên lại trước khi ai kịp nhìn thấy nút đó. */
+  /* `update.apply` và `daemon.uninstall` (`keep_home: false`) đều tự kết thúc chính daemon đang phục
+     vụ request đó — không có gì ở tầng này khởi động lại nó giùm người dùng (đúng luật "không tự
+     khởi động daemon" ở đầu file). Settings gọi `pollUntilDaemonLeaves` ngay khi một trong hai xong
+     (`onUpdateApplied`/`onUninstalled`, cùng một hàm) để nghe đúng lúc `presence` rời khỏi
+     `"running"`, rồi để gate phía trên tự vẽ màn đúng — "Start" nếu chương trình vẫn còn trên đĩa mà
+     chỉ tiến trình dừng, "Get it" nếu đã gỡ sạch (`notInstalled`), hoặc màn hình bình thường nếu
+     daemon đã tự lên lại trước khi ai kịp thấy gate đó. */
   const pollTimer = useRef<number | null>(null);
   const pollUntilDaemonLeaves = useCallback(() => {
     if (pollTimer.current !== null) return;
@@ -193,7 +195,11 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
         {pane("extensions", (active) => <Extensions active={active} />)}
         {pane("metrics", (active) => <Metrics active={active} />)}
         {pane("settings", (active) => (
-          <Settings active={active} onUpdateApplied={pollUntilDaemonLeaves} />
+          <Settings
+            active={active}
+            onUpdateApplied={pollUntilDaemonLeaves}
+            onUninstalled={pollUntilDaemonLeaves}
+          />
         ))}
       </div>
     </div>

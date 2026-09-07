@@ -203,7 +203,13 @@ export default function Sites({ active }: { active: boolean }) {
                   )}
                 </td>
                 <td>{row.kind.kind}</td>
-                <td>{row.https ? "✓" : "—"}</td>
+                <td>
+                  {row.https ? "✓" : "—"}
+                  {/* T98: site ép HTTPS — `?? false` cho daemon build trước khi trường này tồn tại. */}
+                  {row.https && (row.https_redirect ?? false) && (
+                    <span className={styles.redirect}> {t("mixengine.sites.redirect")}</span>
+                  )}
+                </td>
                 <td>{row.state}</td>
                 <td>
                   <SharingCell

@@ -34,10 +34,23 @@
   border-radius: var(--radius-sm);
 }
 
+.cannotPrompt {
+  margin: 0;
+  color: var(--warning-text);
+}
+
 .buttons {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.5rem;
+}
+
+/* Đứng bên trái hai nút trong lúc hộp mật khẩu của hệ điều hành đang mở — dialog khoá, nhưng
+   không được trông như đứng hình. */
+.prompting {
+  margin-right: auto;
+  color: var(--text-muted);
 }
 
 .kind {

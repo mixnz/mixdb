@@ -100,6 +100,8 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
   const [siteUpstream, setSiteUpstream] = useState("");
   const [sitePort, setSitePort] = useState("");
   const [siteHttps, setSiteHttps] = useState(false);
+  /** T98 — cùng luật `SiteForm`: chỉ có nghĩa khi `siteHttps` bật, daemon từ chối tổ hợp ngược. */
+  const [siteHttpsRedirect, setSiteHttpsRedirect] = useState(false);
   const [siteAcceptRiskyTld, setSiteAcceptRiskyTld] = useState(false);
   const [siteSelectedServices, setSiteSelectedServices] = useState<Set<string>>(new Set());
   const [serviceIds, setServiceIds] = useState<string[]>([]);
@@ -215,6 +217,7 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
             kind: siteKindPayload(),
             services: siteSelectedServices.size > 0 ? [...siteSelectedServices] : null,
             https: siteHttps,
+            https_redirect: siteHttps && siteHttpsRedirect,
             accept_risky_tld: siteAcceptRiskyTld,
           });
         } catch (e) {
@@ -421,9 +424,22 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
                     type="checkbox"
                     checked={siteHttps}
                     disabled={saving}
-                    onChange={(e) => setSiteHttps(e.target.checked)}
+                    onChange={(e) => {
+                      setSiteHttps(e.target.checked);
+                      if (!e.target.checked) setSiteHttpsRedirect(false);
+                    }}
                   />
                   {t("mixengine.sites.form.https")}
+                </label>
+
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={siteHttps && siteHttpsRedirect}
+                    disabled={saving || !siteHttps}
+                    onChange={(e) => setSiteHttpsRedirect(e.target.checked)}
+                  />
+                  {t("mixengine.sites.form.httpsRedirect")}
                 </label>
               </Disclosure>
             )}

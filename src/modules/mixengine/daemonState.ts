@@ -41,6 +41,19 @@ export function needsResync(raw: string): boolean {
   }
 }
 
+/** Có phải một `job_finished` không — bất kể job nào. Dashboard đọc lại `daemon.status` khi thấy
+ *  nó, vì một `elevation.grant` xong (từ dialog, từ CLI, hay từ một cửa sổ MixDB khác) đổi số
+ *  thao tác đang chờ mà daemon không phát sự kiện nào riêng cho chuyện đó (`elevation_required`
+ *  chỉ bắn khi hàng đợi *dài thêm*). */
+export function isJobFinished(raw: string): boolean {
+  try {
+    const { type } = JSON.parse(raw) as { type?: unknown };
+    return type === "job_finished";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Bảng sau một message.
  *

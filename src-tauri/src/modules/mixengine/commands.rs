@@ -332,6 +332,14 @@ pub async fn mixengine_service_set_idle(params: Value) -> Result<Value, AppError
     rpc::call("service.set_idle", params).await
 }
 
+/// `service.set_front_end` — T97 / ADR 0026. `params` đúng hình `FrontEndSwitch { server, version?,
+/// grant }`; trả một `JobSummary` (dừng server cũ, dựng server mới là một job), kết quả job là
+/// `FrontEndReport`. Không có method đọc riêng: server đang active đọc từ `ServiceSummary.role`.
+#[tauri::command]
+pub async fn mixengine_service_set_front_end(params: Value) -> Result<Value, AppError> {
+    rpc::call("service.set_front_end", params).await
+}
+
 /// `params` đúng hình `ServiceCreate { id, version, port?, bind_addr?, data_dir?, autostart?,
 /// overrides? }` — không giải vào struct Rust riêng, cùng lý do `mixengine_site_create` đã theo.
 /// Trả `ServiceCreation { service, moved_from? }`: `moved_from` là câu chỉ đúng ở khoảnh khắc này,

@@ -12,6 +12,7 @@ import ServiceForm from "../../components/ServiceForm";
 import {
   applyEvent,
   applyJob,
+  isJobFinished,
   needsResync,
   rowsFrom,
   type JobRow,
@@ -52,6 +53,10 @@ export default function Dashboard({ active }: { active: boolean }) {
   const [status, setStatus] = useState<DaemonStatus | null>(null);
   const [rows, setRows] = useState<ServiceRow[]>([]);
   const [pending, setPending] = useState<unknown[] | null>(null);
+  /** `ElevationStatus.can_prompt`/`reason` — "còn helper để bật prompt không, và tại sao không khi
+   *  không". Mặc định `true` vì đa số máy bật prompt được; chỉ đổi khi `elevation.status` nói khác. */
+  const [canPrompt, setCanPrompt] = useState(true);
+  const [reason, setReason] = useState<string | null | undefined>(null);
   /** Có bao nhiêu thao tác chờ quyền, theo `daemon.status`. Chỉ là con số; danh sách ở `elevation.status`. */
   const [waiting, setWaiting] = useState(0);
   const [jobs, setJobs] = useState<JobRow[]>([]);
@@ -111,6 +116,8 @@ export default function Dashboard({ active }: { active: boolean }) {
   const showWaiting = useCallback(async () => {
     try {
       const answer = await api.elevationStatus();
+      setCanPrompt(answer.can_prompt);
+      setReason(answer.reason);
       setPending(answer.pending);
     } catch (e) {
       setError(errorMessage(t, e));
@@ -183,16 +190,32 @@ export default function Dashboard({ active }: { active: boolean }) {
       // vì bản thân sự kiện này chưa từng được xem là một lý do resync.
       const ops = pendingFrom(raw);
       if (ops !== null) {
-        setPending(ops.length > 0 ? ops : null);
         setWaiting(ops.length);
+        if (ops.length === 0) {
+          setPending(null);
+        } else if (active) {
+          // `elevation_required` chỉ mang `pending` (đúng hình `{"type":"elevation_required",
+          // "pending":[…]}`), không mang `can_prompt`/`reason` — đọc lại qua `elevation.status`
+          // trước khi tự mở dialog, để biết máy này còn bật prompt được không (vd. một `hosts-apply`
+          // cũ kẹt trong hàng đợi từ trước, nhưng helper vừa bị một lệnh Uninstall xoá).
+          //
+          // **Chỉ khi màn này đang hiện.** `MixEngineTab` giữ Dashboard trong DOM khi người dùng ở
+          // màn khác, và `Modal` vẽ qua portal nên một dialog mở từ đây vẫn nổi lên trên màn đó —
+          // trong khi màn tự khởi phát thao tác (CaBlock "Fix browser trust", Doctor "Repair") đã
+          // mở dialog của riêng nó cho đúng hàng đợi này: hai modal y hệt, cùng một job grant.
+          // Khi ẩn, Dashboard chỉ giữ con số cho nút "N đang chờ"; ai mở tab sẽ thấy nút đó.
+          void showWaiting();
+        }
       }
       setJobs((current) => applyJob(current, raw));
       // Sự kiện là best-effort: khi bus bên kia tràn hay kết nối đứt, đọc lại thay vì tin cái đang
       // có trên màn hình. Ngoài updater, vì updater chạy hai lần trong StrictMode.
-      if (needsResync(raw)) void reload();
+      // `job_finished` cũng là một lý do đọc lại: một `elevation.grant` xong đổi số "N đang chờ"
+      // mà không có sự kiện nào riêng nói vậy (xem `isJobFinished`).
+      if (needsResync(raw) || isJobFinished(raw)) void reload();
       setRows((current) => applyEvent(current, raw).rows);
     });
-  }, [reload]);
+  }, [active, reload, showWaiting]);
 
 
 
@@ -233,14 +256,6 @@ export default function Dashboard({ active }: { active: boolean }) {
         <header className={styles.header}>
           <strong>MixEngine {status.version}</strong>
           <span className={styles.home}>{status.home}</span>
-          {/* Không tự bật hộp thoại lúc mở tab: một lô có thể nằm chờ nhiều ngày, và một modal bật
-              lên mỗi lần mở tab là thứ người ta học cách bấm bỏ mà không đọc. Một dòng bấm được
-              nói đúng điều cần nói. */}
-          {waiting > 0 && pending === null && (
-            <button className={styles.waiting} onClick={() => void showWaiting()}>
-              {t("mixengine.dashboard.elevationWaiting", { count: waiting })}
-            </button>
-          )}
           {/* Daemon không có `ServiceRow` — vẽ riêng khỏi bảng service, không chèn vào `rows`.
               `.daemonUsage` đẩy nó sát bên phải header. */}
           {(() => {
@@ -262,6 +277,16 @@ export default function Dashboard({ active }: { active: boolean }) {
       {/* Hàng riêng, xuống dưới header, hai nút sát bên phải — tách khỏi header để header không dài
           thêm mỗi lần một field trạng thái mới được thêm vào. */}
       <div className={styles.headerActions}>
+        {/* Không tự bật hộp thoại lúc mở tab: một lô có thể nằm chờ nhiều ngày, và một modal bật
+            lên mỗi lần mở tab là thứ người ta học cách bấm bỏ mà không đọc. Một nút nói đúng điều
+            cần nói, đặt ở hàng hành động (nơi người ta tìm thứ để bấm) chứ không ở header (dòng
+            định danh: version, home, CPU/RSS) — `.headerButtons` đẩy sang phải nên nút này tự đứng
+            sát mép trái. */}
+        {waiting > 0 && pending === null && (
+          <button className={styles.waiting} onClick={() => void showWaiting()}>
+            {t("mixengine.dashboard.elevationWaiting", { count: waiting })}
+          </button>
+        )}
         <div className={styles.headerButtons}>
           {/* Đường dự phòng thủ công cho đúng lỗ hổng comment `reload` ở trên đã nêu: một service
               được tạo/xoá từ nơi khác (CLI, một tab MixDB khác) không sinh sự kiện nào cho bảng này
@@ -447,6 +472,8 @@ export default function Dashboard({ active }: { active: boolean }) {
       {pending && (
         <ElevationDialog
           pending={pending}
+          canPrompt={canPrompt}
+          reason={reason}
           onClose={() => {
             setPending(null);
             // Sau grant hoặc drop, hàng đợi đã khác: đọc lại con số thay vì giữ cái cũ.

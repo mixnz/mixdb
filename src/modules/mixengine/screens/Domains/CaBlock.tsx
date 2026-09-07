@@ -45,11 +45,20 @@ function browsersLine(browsers: Exclude<Browsers, { state: "reached" }>, t: Tran
  * database của Firefox/Chrome — một máy có thể giữ CA trong kho hệ thống mà không trình duyệt nào
  * biết tới, đó là một trạng thái bình thường chứ không phải mâu thuẫn.
  */
-export default function CaBlock({ onError }: { onError: (message: string) => void }) {
+export default function CaBlock({
+  revision,
+  onError,
+}: {
+  /** Đổi là đọc lại — `Domains` tăng nó khi một job kết thúc hay khi màn được mở lại. */
+  revision: number;
+  onError: (message: string) => void;
+}) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<CaStatus | null>(null);
   const [repairing, setRepairing] = useState(false);
   const [pending, setPending] = useState<unknown[] | null>(null);
+  const [canPrompt, setCanPrompt] = useState(true);
+  const [reason, setReason] = useState<string | null | undefined>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -61,7 +70,7 @@ export default function CaBlock({ onError }: { onError: (message: string) => voi
 
   useEffect(() => {
     void reload();
-  }, [reload]);
+  }, [reload, revision]);
 
   /**
    * Luồng hai lượt T64: enqueue trước với `grant: false`, xong đọc `elevation.status` — có gì chờ
@@ -74,6 +83,8 @@ export default function CaBlock({ onError }: { onError: (message: string) => voi
       await api.caRepair({ grant: false });
       const queue = await api.elevationStatus();
       if (queue.pending.length > 0) {
+        setCanPrompt(queue.can_prompt);
+        setReason(queue.reason);
         setPending(queue.pending);
       } else {
         await reload();
@@ -128,6 +139,8 @@ export default function CaBlock({ onError }: { onError: (message: string) => voi
       {pending && (
         <ElevationDialog
           pending={pending}
+          canPrompt={canPrompt}
+          reason={reason}
           onClose={() => {
             setPending(null);
             void reload();

@@ -28,7 +28,14 @@ function outcomeLabel(row: CertRow, t: Translate): string {
  * **Một call `cert.issue` không `site` vẽ cả bảng.** Cấp lại một hàng là gọi lại đúng method đó với
  * `{ site }` — idempotent, không bật prompt.
  */
-export default function CertTable({ onError }: { onError: (message: string) => void }) {
+export default function CertTable({
+  revision,
+  onError,
+}: {
+  /** Đổi là đọc lại — `Domains` tăng nó khi một job kết thúc hay khi màn được mở lại. */
+  revision: number;
+  onError: (message: string) => void;
+}) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<CertRow[]>([]);
   const [reissuing, setReissuing] = useState<string | null>(null);
@@ -43,7 +50,7 @@ export default function CertTable({ onError }: { onError: (message: string) => v
 
   useEffect(() => {
     void reload();
-  }, [reload]);
+  }, [reload, revision]);
 
   async function reissue(domain: string) {
     setReissuing(domain);
