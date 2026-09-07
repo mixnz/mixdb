@@ -3,8 +3,9 @@
 Kế hoạch dựng phần UI để quản lý **MixEngine** ngay trong MixDB. Viết 2026-09-06, trước khi có
 dòng code nào. Năm pha; mỗi pha tự chạy được và để lại một tab dùng được.
 
-**Trạng thái (cập nhật 2026-09-07): Pha 0–3 đã xong. Pha 4 làm một phần — Blueprints và Extensions
-đã xong, còn nợ Metrics và Settings.**
+**Trạng thái (cập nhật 2026-09-07): Pha 0–4 đã xong**, trừ đúng một hàng — "default web server"
+trong Settings, hoãn tới khi MixEngine phát hành bản mang `service.set_front_end` (T97), xem mục
+"Nợ" cuối [spec Metrics/Settings](../docs/superpowers/specs/2026-09-07-mixengine-metrics-settings-design.md).
 
 - Pha 0 — `91abac3`, `feat(db): save MixEngine handoffs as a keyring reference (#20)`, 2026-09-04,
   từ trước khi roadmap này được viết.
@@ -19,8 +20,12 @@ dòng code nào. Năm pha; mỗi pha tự chạy được và để lại một 
   cùng các bản sửa theo sau cùng ngày/hôm sau (`0e30e78`, `bd4a597`, `09ec534`, `7911730`, `eef467a`),
   2026-09-06 → 2026-09-07. Spec:
   [2026-09-06-mixengine-blueprints-extensions-design.md](../docs/superpowers/specs/2026-09-06-mixengine-blueprints-extensions-design.md).
-  Spec này chỉ phủ Blueprints/Extensions (T4.3–T4.5); Metrics (T4.1–T4.2) và Settings (T4.6–T4.8)
-  chưa có spec, chưa có dòng code nào — xem mục "Còn nợ" ngay dưới bảng ánh xạ màn hình.
+  Spec này chỉ phủ Blueprints/Extensions (T4.3–T4.5).
+- Pha 4 (còn lại) — nhánh `spec/mixengine-phase4-outstanding`, 2026-09-07, bảy commit từ vendor
+  bindings tới màn Settings (`2b2e398`..`f779a15`). Spec:
+  [2026-09-07-mixengine-metrics-settings-design.md](../docs/superpowers/specs/2026-09-07-mixengine-metrics-settings-design.md).
+  Metrics (T4.1–T4.2) và Settings (T4.6–T4.8) xong, trừ hàng "default web server" — xem "Nợ" cuối
+  spec đó.
 
 Nguồn phía MixEngine dùng để viết roadmap này:
 
@@ -299,22 +304,18 @@ validate đúng ô, và tail được log của nó trong lúc nó khởi độn
 
 ---
 
-## Pha 4 — Metrics, Blueprints, Extensions, Settings · **MỘT PHẦN**
+## Pha 4 — Metrics, Blueprints, Extensions, Settings · **ĐÃ XONG** (trừ một hàng)
 
-Blueprints (T4.3) và Extensions (T4.4–T4.5) đã xong ở `00eed71` (#42). **Metrics (T4.1–T4.2) và
-Settings (T4.6–T4.8) còn nợ**: không có command Tauri nào cho namespace `metrics.*`, không có
-`autostart.status`/`daemon.uninstall_plan`/`daemon.uninstall`/`daemon.bundle`, và mục Settings trong
-Sidebar vẫn để `disabled` làm chỗ giữ (`screen: null` — [Sidebar.tsx](../src/modules/mixengine/components/Sidebar/Sidebar.tsx)).
-Metrics thậm chí chưa có trong Sidebar dưới dạng xám. Types đã vendor sẵn
-(`MetricsSample`, `MetricsHistory`, `MetricsFrame`, `DoctorReport`, `AutostartReport`,
-`UninstallQuery`, …) nên phần mượn kiểu không phải việc còn thiếu — chỉ thiếu backend command +
-màn hình.
+Blueprints (T4.3) và Extensions (T4.4–T4.5) xong ở `00eed71` (#42). Metrics (T4.1–T4.2) và Settings
+(T4.6–T4.8) xong ở nhánh `spec/mixengine-phase4-outstanding`, 2026-09-07 — riêng "default web
+server" trong T4.6 hoãn lại, chưa có method nào lên release (xem chú thích tại T4.6 và mục "Nợ"
+cuối [spec](../docs/superpowers/specs/2026-09-07-mixengine-metrics-settings-design.md)).
 
-- **T4.1 — Metrics, hai nhịp lấy mẫu.** *(còn nợ)* Mở `GET /metrics` **chính là** subscribe, đóng là hủy — nên
+- **T4.1 — *(đã xong)* Metrics, hai nhịp lấy mẫu.** Mở `GET /metrics` **chính là** subscribe, đóng là hủy — nên
   một client crash không để lại cái laptop bị đo mỗi giây. Không ai xem thì daemon vẫn lấy một mẫu
   mỗi phút, và lịch sử 24 giờ (`metrics.history`) làm từ đúng những mẫu đó. Không có
   `metrics.subscribe`.
-- **T4.2 — *(còn nợ)* Một phút thiếu nghĩa là không ai đo, không bao giờ nghĩa là không dùng gì.** Vẽ một khoảng
+- **T4.2 — *(đã xong)* Một phút thiếu nghĩa là không ai đo, không bao giờ nghĩa là không dùng gì.** Vẽ một khoảng
   trống; nối hai điểm qua nó là bịa ra một đêm số liệu chưa từng được lấy. Cùng luật ấy trong một
   mẫu: `cpu_percent` là `null` ở chỗ không lấy được số, và vẽ nó thành 0% là tuyên bố một service
   rảnh đúng vào giây nó đắt nhất. CPU/RSS gộp theo cả process group — php-fpm master và worker là một
@@ -336,21 +337,24 @@ màn hình.
   `not_installed { searched }`. MixEngine **tìm** ứng dụng chứ không cài nó, nên version của entry
   không phải câu trả lời của máy này. Một màn hình MixDB tự nói về chính mình ở đây là chuyện dễ vẽ
   sai — giữ nó là một câu, không phải một luồng cài đặt.
-- **T4.6 — *(còn nợ)* Settings.** Root directory, TLD quản lý, web server mặc định, updates, `daemon.doctor` và
-  `daemon.doctor_repair`. Autostart là một công tắc đọc từ `autostart.status`, và câu trả lời nói
-  máy này có cơ chế nào, entry nằm đâu, và — thứ duy nhất client **không được** tự suy ra — một entry
-  đã đăng ký thì thuộc home này hay home khác. Công tắc phải đọc được là *"bật, cho một home khác"*.
-- **T4.7 — *(còn nợ)* Gỡ MixEngine.** `daemon.uninstall_plan` trước và luôn luôn, vì thứ người ta sắp cho phép
+- **T4.6 — *(đã xong, trừ một hàng)* Settings.** Root directory, TLD quản lý, updates,
+  `daemon.doctor` và `daemon.doctor_repair` xong. Autostart là một công tắc đọc từ
+  `autostart.status`, và câu trả lời nói máy này có cơ chế nào, entry nằm đâu, và — thứ duy nhất
+  client **không được** tự suy ra — một entry đã đăng ký thì thuộc home này hay home khác. Công tắc
+  phải đọc được là *"bật, cho một home khác"*. **"Web server mặc định" hoãn lại** —
+  `service.set_front_end`/`ServiceSummary.role` (T97) đã merge vào `master` bên MixEngine nhưng
+  chưa lên bản release ký nào; Settings để một hàng trống có chú thích thay vì giả một câu trả lời.
+- **T4.7 — *(đã xong)* Gỡ MixEngine.** `daemon.uninstall_plan` trước và luôn luôn, vì thứ người ta sắp cho phép
   là thứ họ được xem. Rồi `daemon.uninstall`, một job bật đúng một prompt. Vẽ **mọi** hàng, kể cả
   những hàng trả lời *không có gì ở đó*: màn hình giấu chúng đi khiến người ta không phân biệt được
   "không có resolver wiring" với "resolver wiring không được xem tới". `keep_home` là lời mời giữ lại
   database. **Daemon tự kết thúc khi home đi cùng nó** — client phải chờ kết nối đóng rồi đọc lại các
   hàng `on_exit` từ đĩa, đó mới là *không còn gì sót lại* thay vì *daemon nói thế*.
-- **T4.8 — *(còn nợ)* Diagnostics.** `daemon.bundle` gom một archive và trả đường dẫn của nó — "copy
+- **T4.8 — *(đã xong)* Diagnostics.** `daemon.bundle` gom một archive và trả đường dẫn của nó — "copy
   diagnostics" là một file để mở, không phải năm chỗ để đọc. Thứ nó từ chối mang theo thì nó nêu tên,
   và UI hiện luôn cái đó thay vì trình bày archive như đã đầy đủ.
 
-**Xong khi *(còn nợ)*:** trả lời được câu *"đêm qua cái gì ăn pin của tôi"* từ lịch sử 24 giờ, và gỡ được
+**Xong khi:** trả lời được câu *"đêm qua cái gì ăn pin của tôi"* từ lịch sử 24 giờ, và gỡ được
 MixEngine khỏi máy mà xem trước được từng dòng.
 
 ---
@@ -393,9 +397,9 @@ giờ mọc thêm field, vì đó là thứ client đọc trước khi biết c�
 - **Vendor `bindings/` bằng cách nào.** Tải tarball đã ký mỗi lần bump, hay submodule, hay chép tay
   một lần rồi canh bằng một script trong `scripts/`? Quyết trước T1.2, và ghi vào
   `.agent/decisions/` khi Pha 1 xong.
-- **Một tab hay nhiều tab.** Chín màn hình trong một tab có sidebar là mặc định của roadmap này. Nếu
-  Logs và Metrics muốn mở cạnh nhau, chúng có thể phải là tab riêng — để Pha 3 trả lời bằng cái đã
-  dùng thật, không quyết bây giờ.
+- **Một tab hay nhiều tab — đã trả lời: một tab.** Cả 11 mục sidebar (kể cả Metrics, thêm ở Pha 4)
+  ở chung một tab MixEngine, đổi màn qua `mountedScreens` giữ trạng thái — không ai cần Logs và
+  Metrics mở cạnh nhau tới mức đáng tách tab riêng khi build tới đó.
 - **Tray/menu-bar.** `client-surface.md` nói một tray item không cần gì hơn dashboard: trạng thái
   chung, stop-all, danh sách site. Rẻ, nhưng là quyết định về shell của MixDB chứ không phải về
   module — để sau Pha 1.
