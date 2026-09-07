@@ -275,5 +275,17 @@ pub fn handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Syn
         mixengine::commands::mixengine_extension_uninstall,
         mixengine::commands::mixengine_extension_start,
         mixengine::commands::mixengine_extension_stop,
+        mixengine::commands::mixengine_autostart_status,
+        mixengine::commands::mixengine_autostart_enable,
+        mixengine::commands::mixengine_autostart_disable,
+        mixengine::commands::mixengine_update_status,
+        mixengine::commands::mixengine_update_check,
+        mixengine::commands::mixengine_update_decide,
+        mixengine::commands::mixengine_update_apply,
+        mixengine::commands::mixengine_doctor,
+        mixengine::commands::mixengine_doctor_repair,
+        mixengine::commands::mixengine_uninstall_plan,
+        mixengine::commands::mixengine_uninstall,
+        mixengine::commands::mixengine_bundle,
     ]
 }

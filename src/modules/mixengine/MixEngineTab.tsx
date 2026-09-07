@@ -16,6 +16,7 @@ import Metrics from "./screens/Metrics";
 import Projects from "./screens/Projects";
 import Runtimes from "./screens/Runtimes";
 import ServicesDetail from "./screens/ServicesDetail";
+import Settings from "./screens/Settings";
 import Sites from "./screens/Sites";
 import { parseMixEngineTabState, type MixEngineScreen } from "./tabState";
 import "./mixengine.css";
@@ -157,6 +158,7 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
         {pane("blueprints", (active) => <Blueprints active={active} />)}
         {pane("extensions", (active) => <Extensions active={active} />)}
         {pane("metrics", (active) => <Metrics active={active} />)}
+        {pane("settings", (active) => <Settings active={active} />)}
       </div>
     </div>
   );

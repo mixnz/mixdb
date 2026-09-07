@@ -18,11 +18,11 @@ import styles from "./Sidebar.module.css";
  * `docs/superpowers/specs/2026-09-07-mixengine-metrics-settings-design.md`) vì đây là dữ liệu khác
  * hình dạng (biểu đồ theo thời gian, không phải một hàng trong bảng service).
  *
- * **Chỉ còn Settings xám, không ẩn hẳn.** Một mục biến mất khỏi danh sách không nói gì cả và không
- * ai biết còn màn hình nào đang tới; một mục xám không bấm được là một lời hứa còn giữ được — cùng
- * luật Pha 1 đã theo cho Dashboard/Services.
+ * **Không còn mục nào xám.** Cả 11 mục đều dựng được — riêng bên trong Settings, hàng "default web
+ * server" vẫn để trống có chú thích (T97 chưa lên bản release nào), cùng lý do cả mục Settings từng
+ * để xám trước khi màn hình này tồn tại.
  */
-const ITEMS: readonly { screen: MixEngineScreen | null; labelKey: TranslationKey }[] = [
+const ITEMS: readonly { screen: MixEngineScreen; labelKey: TranslationKey }[] = [
   { screen: "dashboard", labelKey: "mixengine.sidebar.dashboard" },
   { screen: "projects", labelKey: "mixengine.sidebar.projects" },
   { screen: "sites", labelKey: "mixengine.sidebar.sites" },
@@ -33,7 +33,7 @@ const ITEMS: readonly { screen: MixEngineScreen | null; labelKey: TranslationKey
   { screen: "blueprints", labelKey: "mixengine.sidebar.blueprints" },
   { screen: "extensions", labelKey: "mixengine.sidebar.extensions" },
   { screen: "metrics", labelKey: "mixengine.sidebar.metrics" },
-  { screen: null, labelKey: "mixengine.sidebar.settings" },
+  { screen: "settings", labelKey: "mixengine.sidebar.settings" },
 ];
 
 export default function Sidebar({
@@ -52,9 +52,8 @@ export default function Sidebar({
           key={item.labelKey}
           type="button"
           className={styles.item}
-          disabled={item.screen === null}
-          aria-current={item.screen !== null && item.screen === screen ? "page" : undefined}
-          onClick={() => item.screen !== null && onSelect(item.screen)}
+          aria-current={item.screen === screen ? "page" : undefined}
+          onClick={() => onSelect(item.screen)}
         >
           {t(item.labelKey)}
         </button>

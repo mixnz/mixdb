@@ -514,6 +514,82 @@ pub async fn mixengine_extension_stop(id: String) -> Result<Value, AppError> {
     rpc::call("extension.stop", json!({ "id": id })).await
 }
 
+/// `autostart.status` — đọc mechanism/location/enabled/for_this_home hiện tại, không tham số.
+#[tauri::command]
+pub async fn mixengine_autostart_status() -> Result<Value, AppError> {
+    rpc::call("autostart.status", json!({})).await
+}
+
+#[tauri::command]
+pub async fn mixengine_autostart_enable() -> Result<Value, AppError> {
+    rpc::call("autostart.enable", json!({})).await
+}
+
+#[tauri::command]
+pub async fn mixengine_autostart_disable() -> Result<Value, AppError> {
+    rpc::call("autostart.disable", json!({})).await
+}
+
+/// `update.status` — đọc rẻ, không ra mạng.
+#[tauri::command]
+pub async fn mixengine_update_status() -> Result<Value, AppError> {
+    rpc::call("update.status", json!({})).await
+}
+
+/// `params` đúng hình `UpdateCheck { force }` — ra mạng.
+#[tauri::command]
+pub async fn mixengine_update_check(params: Value) -> Result<Value, AppError> {
+    rpc::call("update.check", params).await
+}
+
+/// `params` đúng hình `UpdateDecide { version, decision }`.
+#[tauri::command]
+pub async fn mixengine_update_decide(params: Value) -> Result<Value, AppError> {
+    rpc::call("update.decide", params).await
+}
+
+/// `params` đúng hình `UpdateApply { version }`. Daemon tự thoát ngay sau khi trả lời — cùng luật
+/// `daemon.shutdown` Pha 1 đã theo (T1.5: không trả lời là một trạng thái đọc được, không phải lỗi).
+#[tauri::command]
+pub async fn mixengine_update_apply(params: Value) -> Result<Value, AppError> {
+    rpc::call("update.apply", params).await
+}
+
+/// `daemon.doctor` — đọc thuần, không tham số, không thể tự bật elevation.
+#[tauri::command]
+pub async fn mixengine_doctor() -> Result<Value, AppError> {
+    rpc::call("daemon.doctor", json!({})).await
+}
+
+/// `params` đúng hình `DoctorRepair { grant }` — tách khỏi `mixengine_ca_repair` đã có: cái đó
+/// hard-code `grant: true` riêng cho luồng sửa CA (Pha 2), cái này nhận `grant` từ Settings, theo
+/// đúng luồng hai lượt T64 (enqueue trước, `elevation.grant` sau khi đã hiện hàng đợi).
+#[tauri::command]
+pub async fn mixengine_doctor_repair(params: Value) -> Result<Value, AppError> {
+    rpc::call("daemon.doctor_repair", params).await
+}
+
+/// `params` đúng hình `UninstallQuery { keep_home, grant: false }` — đọc thuần (T87 rule), gọi
+/// trước và luôn luôn trước `mixengine_uninstall`.
+#[tauri::command]
+pub async fn mixengine_uninstall_plan(params: Value) -> Result<Value, AppError> {
+    rpc::call("daemon.uninstall_plan", params).await
+}
+
+/// `params` đúng hình `UninstallQuery { keep_home, grant: true }` — một job tự bật đúng một prompt,
+/// và trừ khi `keep_home` thì daemon tự thoát sau khi job ghi xong kết quả.
+#[tauri::command]
+pub async fn mixengine_uninstall(params: Value) -> Result<Value, AppError> {
+    rpc::call("daemon.uninstall", params).await
+}
+
+/// `daemon.bundle` — không tham số thật (`DiagnosticsBundle` rỗng), gom một archive và trả đường
+/// dẫn của nó.
+#[tauri::command]
+pub async fn mixengine_bundle() -> Result<Value, AppError> {
+    rpc::call("daemon.bundle", json!({})).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
