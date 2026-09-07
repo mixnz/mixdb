@@ -42,6 +42,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and ver
 
 ## [Unreleased]
 
+## [0.0.33] - 2026-09-08
+
+### Added
+
+- Sites can switch the default web server serving them, with confirmation and rollback on failure.
+- Sites gain an HTTP-to-HTTPS redirect option.
+- Settings gains a Metrics screen with 24-hour CPU/RSS history, and a Dashboard panel for disk usage and cleanup.
+- Settings gains root directory, managed TLDs, autostart, updates, doctor/repair, uninstall and a diagnostics bundle.
+
+### Changed
+
+- Uninstalling MixEngine now shows a confirmation dialog explaining what will be removed, instead of a "click again" prompt.
+- Repairing browser trust for the local CA now asks for elevation in two steps instead of one.
+
+### Fixed
+
+- A failed runtime or package install now shows an error instead of silently clearing its progress bar.
+- Applying an update no longer leaves Settings stuck on "will restart shortly" forever; the app now waits for the daemon to actually exit and offers a Start button.
+
 ## [0.0.32] - 2026-09-06
 
 ### Added
@@ -617,7 +636,8 @@ installs it and restarts. Every update is checked against MixDB's signing key fi
      links rather than decoration. `set-version.mjs` adds a line here as it cuts a section,
      so this stays in step without anyone remembering it. -->
 
-[Unreleased]: https://github.com/mixnz/mixdb/compare/v0.0.32...HEAD
+[Unreleased]: https://github.com/mixnz/mixdb/compare/v0.0.33...HEAD
+[0.0.33]: https://github.com/mixnz/mixdb/compare/v0.0.32...v0.0.33
 [0.0.32]: https://github.com/mixnz/mixdb/compare/v0.0.31...v0.0.32
 [0.0.31]: https://github.com/mixnz/mixdb/compare/v0.0.30...v0.0.31
 [0.0.30]: https://github.com/mixnz/mixdb/compare/v0.0.29...v0.0.30
