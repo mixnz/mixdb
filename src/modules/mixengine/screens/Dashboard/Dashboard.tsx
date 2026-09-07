@@ -17,6 +17,14 @@ import {
   type ServiceRow,
 } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
+import type { MetricsFrame } from "../../api/types/MetricsFrame";
+import {
+  DAEMON_SUBJECT,
+  formatBytes,
+  metricsSubjectFor,
+  parseMetricsFrame,
+  readingFor,
+} from "../../metricsState";
 import { pendingFrom } from "../../pendingOps";
 import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
 import styles from "./Dashboard.module.css";
@@ -43,6 +51,8 @@ export default function Dashboard({ active }: { active: boolean }) {
   /** Có bao nhiêu thao tác chờ quyền, theo `daemon.status`. Chỉ là con số; danh sách ở `elevation.status`. */
   const [waiting, setWaiting] = useState(0);
   const [jobs, setJobs] = useState<JobRow[]>([]);
+  /** Frame mới nhất của `/metrics`, hoặc `null` khi chưa có (stream chưa mở, hay chưa nhận frame nào). */
+  const [frame, setFrame] = useState<MetricsFrame | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   /** Service nào đang có một hành động bay, và là hành động nào. Khoá theo id. */
@@ -116,6 +126,30 @@ export default function Dashboard({ active }: { active: boolean }) {
     if (active) void reload();
   }, [active, reload]);
 
+  /**
+   * `/metrics` khoá vòng đời theo `active`, không theo mount/unmount như `/events`.
+   *
+   * **Mở kết nối này chính là subscribe** — MixEngine lấy mẫu 1 Hz trong lúc còn ai giữ stream, 1
+   * lần/phút khi không. `MixEngineTab.tsx` giữ mọi màn đã-xem-qua ở trong DOM thay vì unmount lúc
+   * đổi tab, nên nếu khoá theo unmount, rời Dashboard sang màn khác sẽ không đóng được gì — daemon
+   * kẹt ở lấy mẫu nhanh vĩnh viễn dù không còn ai nhìn. Effect cleanup chạy cho cả hai trường hợp
+   * (`active` chuyển `false`, và unmount thật), nên khoá theo `active` là đủ cho cả hai.
+   */
+  useEffect(() => {
+    if (!active) return;
+    let live = true;
+    void api.metricsWatch((raw) => {
+      if (!live) return;
+      const next = parseMetricsFrame(raw);
+      if (next !== null) setFrame(next);
+    });
+    return () => {
+      live = false;
+      setFrame(null);
+      void api.metricsUnwatch();
+    };
+  }, [active]);
+
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
       // Một lô rỗng nghĩa là không còn gì chờ — đóng hộp thoại thay vì để nó đứng đó rỗng không.
@@ -174,6 +208,18 @@ export default function Dashboard({ active }: { active: boolean }) {
         <header className={styles.header}>
           <strong>MixEngine {status.version}</strong>
           <span className={styles.home}>{status.home}</span>
+          {/* Daemon không có `ServiceRow` — vẽ riêng khỏi bảng service, không chèn vào `rows`. */}
+          {(() => {
+            const daemon = readingFor(frame, DAEMON_SUBJECT);
+            return daemon && (
+              <span className={styles.home}>
+                {t("mixengine.dashboard.daemonUsage", {
+                  cpu: daemon.cpu_percent === null ? "—" : `${daemon.cpu_percent}%`,
+                  rss: formatBytes(daemon.rss_bytes),
+                })}
+              </span>
+            );
+          })()}
           {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
           <button
             onClick={() =>
@@ -218,21 +264,27 @@ export default function Dashboard({ active }: { active: boolean }) {
           {/* Bề rộng khai ở đây chứ không để nội dung quyết — xem `table-layout: fixed` bên CSS.
               Tỉ lệ lấy từ bề rộng nội tại đo được của từng cột, không phải ước lượng. */}
           <colgroup>
-            <col style={{ width: "24%" }} />
-            <col style={{ width: "31%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "22%" }} />
+            <col style={{ width: "7%" }} />
             <col style={{ width: "9%" }} />
-            <col style={{ width: "36%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "34%" }} />
           </colgroup>
           <thead>
             <tr>
               <th>{t("mixengine.dashboard.service")}</th>
               <th>{t("mixengine.dashboard.state")}</th>
               <th>{t("mixengine.dashboard.port")}</th>
+              <th>{t("mixengine.dashboard.cpu")}</th>
+              <th>{t("mixengine.dashboard.rss")}</th>
               <th>{t("mixengine.dashboard.actions")}</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row) => {
+              const reading = readingFor(frame, metricsSubjectFor(row.id));
+              return (
               <tr key={row.id}>
                 {/* Cột cố định không nới ra cho một id dài, nên id đầy đủ ở lại trong `title`. */}
                 <td title={row.id}>{row.id}</td>
@@ -248,6 +300,11 @@ export default function Dashboard({ active }: { active: boolean }) {
                   )}
                 </td>
                 <td>{row.port ?? "—"}</td>
+                {/* Vắng mặt trong frame (chưa có stream, hay service chưa lọt vào lần đo) là "—",
+                    không phải 0% — một service rảnh và một service không đo được là hai câu khác
+                    nhau. `cpu_percent: null` trên chính sample cũng vẽ "—" vì cùng lý do đó. */}
+                <td>{reading === null || reading.cpu_percent === null ? "—" : `${reading.cpu_percent}%`}</td>
+                <td>{reading === null ? "—" : formatBytes(reading.rss_bytes)}</td>
                 <td className={styles.actions}>
                   {/* Nghỉ thì là một cái đèn báo, chạm vào thì là một cái nút. Màu lúc nghỉ nói
                       *trạng thái* (cùng bảng với cột State), màu lúc hover nói *việc sắp làm*.
@@ -304,7 +361,8 @@ export default function Dashboard({ active }: { active: boolean }) {
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

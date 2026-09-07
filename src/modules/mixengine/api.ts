@@ -395,3 +395,16 @@ export function extensionStart(id: string): Promise<unknown> {
 export function extensionStop(id: string): Promise<unknown> {
   return invoke("mixengine_extension_stop", { id });
 }
+
+/** Mở `GET /metrics`. Cùng khuôn `logsWatch` — một `Channel` mới, người gọi tự parse JSON thô.
+ *  **Mở kết nối này chính là subscribe**: gọi đúng lúc màn hình cần số "bây giờ", đóng lại bằng
+ *  `metricsUnwatch()` ngay khi không còn cần — không mở suốt đời app như `watch()`/`/events`. */
+export function metricsWatch(onFrame: (raw: string) => void): Promise<void> {
+  const channel = new Channel<string>();
+  channel.onmessage = onFrame;
+  return invoke("mixengine_metrics_watch", { onFrame: channel });
+}
+
+export function metricsUnwatch(): Promise<void> {
+  return invoke("mixengine_metrics_unwatch");
+}
