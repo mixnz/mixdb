@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import Button from "../../../../components/Button";
@@ -29,8 +29,10 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
   const { t } = useTranslation();
   const editing = initial !== undefined;
 
-  const [projectNames, setProjectNames] = useState<string[] | null>(null);
+  const [projectNames, setProjectNames] = useState<string[]>([]);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
+  // `false` cho tới khi cả hai danh sách trên tới nơi — xem chỗ dùng nó ngay trước `return`.
+  const [listsReady, setListsReady] = useState(false);
 
   const [project, setProject] = useState(
     editing && initial.site.owner.type === "project"
@@ -41,6 +43,10 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
   // `SiteDetail.root` đã có sẵn, project bị khoá nên không đổi nữa. Chỉ để hiển thị: giá trị gửi
   // lên daemon vẫn luôn là phần còn lại một mình (`docRoot`), đúng `SiteSummary.doc_root`.
   const [projectRoot, setProjectRoot] = useState(editing ? initial.root : "");
+  // Đã có lần trả lời đầu tiên chưa — khác với `projectRoot !== ""`, vì "" là một câu trả lời hợp
+  // lệ (không project nào chọn, hoặc project rỗng thật). Chỉ chặn Modal ở lần đầu; đổi project sau
+  // khi Modal đã mở không đóng nó lại, xem chỗ dùng ngay trước `return`.
+  const [projectRootReady, setProjectRootReady] = useState(editing);
   const [domainsText, setDomainsText] = useState(editing ? initial.domains.join(", ") : "");
   const [docRoot, setDocRoot] = useState(editing ? initial.site.doc_root : "");
   const [kind, setKind] = useState<Kind>(editing ? initial.site.kind.kind : "php-fpm");
@@ -62,11 +68,21 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  // Dialog dài (nhiều field, danh sách service) cuộn được, nút Lưu ở cuối — lỗi vẽ ra ngay phía
+  // trên nút đó nhưng chèn thêm nội dung không tự kéo trình duyệt theo, nên không cuộn tới thì lỗi
+  // coi như vô hình. Cuộn theo `.actions`, không phải chính khối lỗi — cùng lý do/luật
+  // `ProjectForm.tsx` đã áp (`block: "end"` theo khối lỗi sẽ đẩy hai nút ra ngoài tầm nhìn).
+  useEffect(() => {
+    if (error !== "") actionsRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [error]);
 
   useEffect(() => {
     void Promise.all([api.projects(), api.services()]).then(([projectList, serviceList]) => {
       setProjectNames(projectList.projects.map((p) => p.name));
       setServiceIds(serviceList.services.map((s) => s.id));
+      setListsReady(true);
     });
   }, []);
 
@@ -75,16 +91,21 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
     if (editing) return;
     if (project === "") {
       setProjectRoot("");
+      setProjectRootReady(true);
       return;
     }
     let live = true;
     void api
       .projectShow(project)
       .then((detail) => {
-        if (live) setProjectRoot(detail.project.root);
+        if (!live) return;
+        setProjectRoot(detail.project.root);
+        setProjectRootReady(true);
       })
       .catch(() => {
-        if (live) setProjectRoot("");
+        if (!live) return;
+        setProjectRoot("");
+        setProjectRootReady(true);
       });
     return () => {
       live = false;
@@ -93,7 +114,17 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
 
   const domains = parseDomains(domainsText);
   const needsRiskyTldConsent = domains.some((d) => d.endsWith(".local"));
-  const noProjects = !editing && projectNames !== null && projectNames.length === 0;
+  const noProjects = !editing && projectNames.length === 0;
+
+  // Chưa đủ dữ liệu để biết hình dạng cuối cùng của form — chưa mở Modal. Không chờ thì danh sách
+  // service (rỗng lúc đầu, đầy sau khi `api.services()` trả lời) và dòng "Full path" (chờ
+  // `projectRoot`) nới chiều cao dialog ra đúng lúc animation mở nó còn đang chạy — dialog đang
+  // animate ở một chiều cao, giữa chừng lại cao thêm, và đó chính là chỗ modal "dứt vị trí lên
+  // trên" bị báo. `onEntered`/`.settled` (`dialogMotion.ts`) chỉ che được thay đổi *sau khi*
+  // animation xong; thay đổi *trong lúc* nó đang chạy thì phải tránh từ gốc, không phải che sau đó.
+  // Gọi cục bộ qua IPC nên thường xong trong một khung hình — một khoảng lặng rất ngắn trước khi mở
+  // còn tốt hơn một cái giật hình sau khi đã mở.
+  if (!listsReady || !projectRootReady) return null;
 
   function toggleService(id: string) {
     setSelectedServices((current) => {
@@ -194,8 +225,8 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
                   <Select
                     value={project}
                     onChange={setProject}
-                    disabled={projectNames === null || saving}
-                    options={(projectNames ?? []).map((name) => ({ value: name, label: name }))}
+                    disabled={saving}
+                    options={projectNames.map((name) => ({ value: name, label: name }))}
                     placeholder={t("mixengine.sites.form.project")}
                   />
                 )}
@@ -238,7 +269,10 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
                 </Button>
               </div>
               {/* Ô trên chỉ giữ phần còn lại sau root (đúng cái daemon lưu) — dòng này là chỗ
-                  duy nhất người dùng thấy root của project và đường dẫn đầy đủ thật sự là gì. */}
+                  duy nhất người dùng thấy root của project và đường dẫn đầy đủ thật sự là gì.
+                  `projectRoot` đã chắc chắn có giá trị cuối cùng trước khi Modal này được mở (xem
+                  `listsReady`/`projectRootReady` phía trên), nên render có điều kiện ở đây không
+                  còn đổi chiều cao dialog sau khi nó đã mở. */}
               {projectRoot !== "" && (
                 <p className={styles.hint}>
                   {t("mixengine.sites.form.docRootFull", {
@@ -351,7 +385,7 @@ export default function SiteForm({ initial, defaultProject, onCancel, onSaved }:
             </div>
           )}
 
-          <div className={styles.actions}>
+          <div ref={actionsRef} className={styles.actions}>
             <Button size="large" onClick={() => close(onCancel)} disabled={saving}>
               {t("common.cancel")}
             </Button>

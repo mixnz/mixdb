@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import Button from "../../../../components/Button";
@@ -12,7 +12,7 @@ import * as api from "../../api";
 import type { ProjectDetail } from "../../api/types/ProjectDetail";
 import type { RuntimeKind } from "../../api/types/RuntimeKind";
 import type { SiteKind } from "../../api/types/SiteKind";
-import { parseDomains } from "../../siteState";
+import { joinDocRoot, parseDomains, relativeToRoot } from "../../siteState";
 import styles from "./ProjectForm.module.css";
 
 const RUNTIME_KINDS: readonly RuntimeKind[] = ["php", "node", "python", "ruby"];
@@ -91,25 +91,62 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
   // "Tạo nhanh site" — chỉ hiện lúc tạo project mới (xem JSX). Bỏ trống domains là bỏ qua hẳn bước
   // này, không phải một site rỗng gửi lên daemon.
   const [siteDomainsText, setSiteDomainsText] = useState("");
+  // Root của site này luôn là `root` (field ngay phía trên) — cùng project, biết ngay từ đầu, không
+  // cần đọc lại như `SiteForm` phải làm khi project là một lựa chọn tách rời. Giá trị gửi lên daemon
+  // vẫn là phần còn lại một mình, đúng `SiteSummary.doc_root`.
+  const [siteDocRoot, setSiteDocRoot] = useState("");
   const [siteKind, setSiteKind] = useState<Kind>("php-fpm");
   const [sitePool, setSitePool] = useState("");
   const [siteUpstream, setSiteUpstream] = useState("");
   const [sitePort, setSitePort] = useState("");
   const [siteHttps, setSiteHttps] = useState(false);
   const [siteAcceptRiskyTld, setSiteAcceptRiskyTld] = useState(false);
+  const [siteSelectedServices, setSiteSelectedServices] = useState<Set<string>>(new Set());
   const [serviceIds, setServiceIds] = useState<string[]>([]);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (editing) return;
     void api.services().then((list) => setServiceIds(list.services.map((s) => s.id)));
   }, [editing]);
 
+  // Dialog dài (khối "tạo nhanh site" mở ra) cuộn được, và nút Lưu nằm ở cuối — lỗi vẽ ra ngay
+  // phía trên nút đó, đúng chỗ người dùng đang nhìn lúc bấm, nhưng chèn thêm nội dung vào giữa
+  // trang không tự kéo trình duyệt theo. Cuộn theo `.actions` (không phải chính khối lỗi) với
+  // `block: "end"` — cuộn theo khối lỗi sẽ đẩy đúng hai nút Cancel/Save ra ngoài tầm nhìn phía dưới,
+  // vì `block: "end"` canh *đáy* của phần tử được nhắm vào đáy khung nhìn; nhắm vào `.actions` (phần
+  // tử cuối cùng) cho cả lỗi lẫn hai nút cùng lọt vào khung một lượt.
+  useEffect(() => {
+    if (error !== "") actionsRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [error]);
+
   async function browseRoot() {
     const picked = await openDialog({ directory: true, multiple: false });
     if (typeof picked === "string") setRoot(picked);
+  }
+
+  /** Cùng luật `SiteForm.browseDocRoot`: dialog trả tuyệt đối, cắt bỏ phần root trước khi lưu, mở
+   *  sẵn đúng chỗ đang chọn. */
+  async function browseSiteDocRoot() {
+    const picked = await openDialog({
+      directory: true,
+      multiple: false,
+      defaultPath: root === "" ? undefined : joinDocRoot(root, siteDocRoot),
+    });
+    if (typeof picked !== "string") return;
+    setSiteDocRoot(root === "" ? picked : relativeToRoot(root, picked));
+  }
+
+  function toggleSiteService(id: string) {
+    setSiteSelectedServices((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function pinsPayload(): Partial<Record<RuntimeKind, string>> | undefined {
@@ -174,9 +211,9 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
           await api.siteCreate({
             project: { name: created.project.name },
             domains: siteDomains,
-            doc_root: null,
+            doc_root: siteDocRoot === "" ? null : siteDocRoot,
             kind: siteKindPayload(),
-            services: null,
+            services: siteSelectedServices.size > 0 ? [...siteSelectedServices] : null,
             https: siteHttps,
             accept_risky_tld: siteAcceptRiskyTld,
           });
@@ -283,6 +320,29 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
                 )}
 
                 <label className={styles.field}>
+                  {t("mixengine.sites.form.docRoot")}
+                  <div className={styles.rootRow}>
+                    <Input
+                      value={siteDocRoot}
+                      disabled={saving}
+                      onChange={(e) => setSiteDocRoot(e.target.value)}
+                    />
+                    <Button onClick={() => void browseSiteDocRoot()} disabled={saving}>
+                      {t("common.browse")}
+                    </Button>
+                  </div>
+                  {/* `root` luôn có sẵn (field ngay đầu form) — không cần chờ gì, không có lý do
+                      ẩn/hiện dòng này theo dữ liệu bất đồng bộ như `SiteForm` phải làm. */}
+                  {root !== "" && (
+                    <p className={styles.hint}>
+                      {t("mixengine.sites.form.docRootFull", {
+                        path: joinDocRoot(root, siteDocRoot),
+                      })}
+                    </p>
+                  )}
+                </label>
+
+                <label className={styles.field}>
                   {t("mixengine.sites.form.kind")}
                   <Select
                     value={siteKind}
@@ -339,6 +399,23 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
                   </label>
                 )}
 
+                <div className={styles.field}>
+                  {t("mixengine.sites.form.services")}
+                  <div className={styles.serviceList}>
+                    {serviceIds.map((id) => (
+                      <label key={id} className={styles.checkbox}>
+                        <input
+                          type="checkbox"
+                          checked={siteSelectedServices.has(id)}
+                          disabled={saving}
+                          onChange={() => toggleSiteService(id)}
+                        />
+                        {id}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
                 <label className={styles.checkbox}>
                   <input
                     type="checkbox"
@@ -358,7 +435,7 @@ export default function ProjectForm({ initial, onCancel, onSaved }: Props) {
             </div>
           )}
 
-          <div className={styles.actions}>
+          <div ref={actionsRef} className={styles.actions}>
             <Button size="large" onClick={() => close(onCancel)} disabled={saving}>
               {t("common.cancel")}
             </Button>

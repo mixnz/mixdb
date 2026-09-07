@@ -69,33 +69,62 @@ export default function Sites({ active }: { active: boolean }) {
   const [sharing, setSharing] = useState<string | null>(null);
   const { t } = useTranslation();
 
-  const reload = useCallback(async () => {
-    try {
-      const list = await api.sites(projectFilter === "" ? undefined : projectFilter);
-      setRows(list.sites);
-      setError("");
-    } catch (e) {
-      setError(errorMessage(t, e));
-    }
-  }, [projectFilter, t]);
+  // `filterOverride` là đường thoát khỏi độ trễ một nhịp của `setState`: effect refresh project
+  // list dưới đây tính ra filter hợp lệ rồi cần đọc site *ngay* với giá trị đó, không phải với
+  // `projectFilter` cũ còn nằm trong closure cho tới lần render kế tiếp.
+  const reload = useCallback(
+    async (filterOverride?: string) => {
+      const filter = filterOverride ?? projectFilter;
+      try {
+        const list = await api.sites(filter === "" ? undefined : filter);
+        setRows(list.sites);
+        setError("");
+      } catch (e) {
+        setError(errorMessage(t, e));
+      }
+    },
+    [projectFilter, t],
+  );
 
-  useEffect(() => {
-    void api.projects().then((list) => setProjectNames(list.projects.map((p) => p.name)));
-  }, []);
-
-  // Projects đặt một yêu cầu điều hướng ("mở Sites, lọc theo project X") qua `sitesNavigation.ts`
-  // rồi chuyển sang màn này — đọc đúng lúc `active` chuyển `true`, trước khi `reload()` chạy, để
-  // lần đọc đầu tiên khi quay lại màn đã lọc đúng thay vì lọc "tất cả" rồi phải sửa tay.
+  /**
+   * Đọc lại danh sách project mỗi khi vừa quay lại màn này — một project có thể vừa được
+   * thêm/sửa/xoá ở màn Projects trong lúc màn này bị ẩn, và trước đây danh sách chỉ đọc một lần lúc
+   * mount nên Select đứng yên với dữ liệu cũ.
+   *
+   * **Validate `projectFilter` trước khi gọi `site.list`, không phải sau.** Filter đang chọn có thể
+   * trỏ tới một project vừa bị xoá — gọi `site.list` với một project không còn tồn tại là daemon từ
+   * chối thẳng ("no such project: …"), không phải trả một danh sách rỗng, nên phải đổi filter về
+   * "tất cả" *trước* khi đọc site, không phải bắt lỗi rồi thử lại.
+   *
+   * Cũng là chỗ đọc yêu cầu điều hướng từ `sitesNavigation.ts` (Projects → "mở Sites, lọc theo
+   * project X") — gộp chung vì cả hai đều quyết định filter nào là đúng trước khi gọi `site.list`.
+   */
   useEffect(() => {
     if (!active) return;
-    const requested = takePendingSitesFilter();
-    if (requested !== null) setProjectFilter(requested);
+    let live = true;
+    void (async () => {
+      const requested = takePendingSitesFilter();
+      try {
+        const list = await api.projects();
+        if (!live) return;
+        const names = list.projects.map((p) => p.name);
+        setProjectNames(names);
+        const wanted = requested ?? projectFilter;
+        const valid = wanted !== "" && names.includes(wanted) ? wanted : "";
+        if (valid !== projectFilter) setProjectFilter(valid);
+        await reload(valid);
+      } catch (e) {
+        if (live) setError(errorMessage(t, e));
+      }
+    })();
+    return () => {
+      live = false;
+    };
+    // `reload`/`projectFilter` cố ý đọc từ closure tại thời điểm effect chạy, không phải deps: đây
+    // là lần refresh cho một lượt `active` mới, không phải một effect nên chạy lại mỗi khi
+    // `projectFilter` tự đổi (SiteForm lưu xong đã có `reload()` riêng cho việc đó).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
-
-  // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
-  useEffect(() => {
-    if (active) void reload();
-  }, [active, reload]);
 
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
