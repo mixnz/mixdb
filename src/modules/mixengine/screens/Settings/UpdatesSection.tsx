@@ -7,18 +7,41 @@ import * as api from "../../api";
 import type { UpdateStatus } from "../../api/types/UpdateStatus";
 import styles from "./Settings.module.css";
 
+/** Chấm chạy `""` → `"."` → `".."` → `"..."`, lặp lại — báo còn sống trong lúc `applying`. */
+function useRunningDots(active: boolean): string {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!active) {
+      setCount(0);
+      return;
+    }
+    const id = window.setInterval(() => setCount((n) => (n + 1) % 4), 450);
+    return () => window.clearInterval(id);
+  }, [active]);
+  return ".".repeat(count);
+}
+
 /**
  * `update.status`/`check`/`decide`/`apply`.
  *
  * **`update.apply` kết thúc chính daemon đang phục vụ request đó** — cùng luật `daemon.shutdown`
- * Pha 1 đã theo (T1.5). `applying` ở lại `true` sau khi lời gọi thành công vì không có "xong" nào
- * để quay lại từ đây — tab MixEngine tự đọc lại trạng thái daemon (`presence`) khi ai đó tương tác
- * tiếp, đúng luật "daemon chết là một trạng thái đọc được".
+ * Pha 1 đã theo (T1.5). Không có gì ở đây tự gọi lại `startDaemon` giùm người dùng — đúng luật
+ * "không tự khởi động daemon" `MixEngineTab` đã ghi. `applying` ở lại `true` sau khi lời gọi thành
+ * công; `onApplied` báo cho `MixEngineTab` bắt đầu nghe `presence` rời khỏi `"running"`, để gate phía
+ * trên tự vẽ đúng màn — có nút Start nếu daemon chưa tự lên lại, hoặc màn hình bình thường nếu nó đã
+ * tự lên lại trước khi ai kịp thấy nút đó.
  */
-export default function UpdatesSection({ onError }: { onError: (message: string) => void }) {
+export default function UpdatesSection({
+  onError,
+  onApplied,
+}: {
+  onError: (message: string) => void;
+  onApplied: () => void;
+}) {
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [checking, setChecking] = useState(false);
   const [applying, setApplying] = useState(false);
+  const dots = useRunningDots(applying);
   const { t } = useTranslation();
 
   const reload = useCallback(async () => {
@@ -58,8 +81,9 @@ export default function UpdatesSection({ onError }: { onError: (message: string)
     setApplying(true);
     try {
       await api.updateApply({ version: status.available.version });
-      // Không setApplying(false) ở đây: daemon vừa tự thoát, và "đang cài đặt lại" là câu đúng
-      // cho tới khi tab tự phát hiện daemon đã trở lại.
+      // Không setApplying(false) ở đây: daemon vừa tự thoát, và "đang cài đặt" là câu đúng cho tới
+      // khi gate ở MixEngineTab phát hiện presence rời "running" và thay hẳn màn hình này.
+      onApplied();
     } catch (e) {
       onError(errorMessage(t, e));
       setApplying(false);
@@ -77,7 +101,10 @@ export default function UpdatesSection({ onError }: { onError: (message: string)
       </p>
 
       {applying ? (
-        <p className={styles.muted}>{t("mixengine.settings.updates.applying")}</p>
+        <p className={styles.muted}>
+          {t("mixengine.settings.updates.applying")}
+          {dots}
+        </p>
       ) : status.offered && status.available ? (
         <div className={styles.row}>
           <span>{t("mixengine.settings.updates.offered", { version: status.available.version })}</span>

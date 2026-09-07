@@ -300,7 +300,7 @@ export default {
         skip: "Skip this version",
         notOffered: "A newer version exists but is not offered: {{because}}",
         none: "You are on the latest version.",
-        applying: "Installing — MixEngine will restart shortly…",
+        applying: "Installing — MixEngine will exit when this finishes",
         managed: "This copy cannot update itself: {{because}}",
       },
       doctor: {

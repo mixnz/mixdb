@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 import ErrorBanner from "../../components/ErrorBanner";
@@ -76,6 +76,31 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
       live = false;
     };
   }, []);
+
+  /* `update.apply` tự kết thúc daemon đang phục vụ request đó sau khi trả lời — không có gì ở tầng
+     này khởi động lại nó giùm người dùng (đúng luật "không tự khởi động daemon" ở đầu file). Settings
+     gọi `pollUntilDaemonLeaves` ngay khi `update.apply` xong để nghe đúng lúc `presence` rời khỏi
+     `"running"`, rồi để gate phía trên tự vẽ màn đúng — có nút Start nếu daemon chưa tự lên lại kiểu
+     nào đó, hoặc daemon bình thường nếu nó đã lên lại trước khi ai kịp nhìn thấy nút đó. */
+  const pollTimer = useRef<number | null>(null);
+  const pollUntilDaemonLeaves = useCallback(() => {
+    if (pollTimer.current !== null) return;
+    pollTimer.current = window.setInterval(() => {
+      void api.presence().then((answer) => {
+        setPresence(answer);
+        if (answer !== "running" && pollTimer.current !== null) {
+          window.clearInterval(pollTimer.current);
+          pollTimer.current = null;
+        }
+      });
+    }, 1000);
+  }, []);
+  useEffect(
+    () => () => {
+      if (pollTimer.current !== null) window.clearInterval(pollTimer.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     onTitleChange(t("mixengine.newTabTitle"));
@@ -167,7 +192,9 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
         {pane("blueprints", (active) => <Blueprints active={active} />)}
         {pane("extensions", (active) => <Extensions active={active} />)}
         {pane("metrics", (active) => <Metrics active={active} />)}
-        {pane("settings", (active) => <Settings active={active} />)}
+        {pane("settings", (active) => (
+          <Settings active={active} onUpdateApplied={pollUntilDaemonLeaves} />
+        ))}
       </div>
     </div>
   );

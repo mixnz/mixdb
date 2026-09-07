@@ -24,7 +24,13 @@ import UpdatesSection from "./UpdatesSection";
  * để trống có chú thích thay vì ẩn hẳn, cùng lý do Sidebar để cả mục Settings xám trước khi màn này
  * tồn tại.
  */
-export default function Settings({ active }: { active: boolean }) {
+export default function Settings({
+  active,
+  onUpdateApplied,
+}: {
+  active: boolean;
+  onUpdateApplied: () => void;
+}) {
   const [status, setStatus] = useState<DaemonStatus | null>(null);
   const [error, setError] = useState("");
   const { t } = useTranslation();
@@ -61,7 +67,7 @@ export default function Settings({ active }: { active: boolean }) {
       )}
 
       <AutostartSection onError={setError} />
-      <UpdatesSection onError={setError} />
+      <UpdatesSection onError={setError} onApplied={onUpdateApplied} />
       <DoctorSection onError={setError} />
       <UninstallSection onError={setError} />
       <DiagnosticsSection onError={setError} />

@@ -298,7 +298,7 @@ const vi: typeof en = {
         skip: "Bỏ qua bản này",
         notOffered: "Có bản mới hơn nhưng chưa mời cài: {{because}}",
         none: "Bạn đang dùng bản mới nhất.",
-        applying: "Đang cài đặt — MixEngine sắp khởi động lại…",
+        applying: "Đang cài đặt — MixEngine sẽ thoát khi xong",
         managed: "Bản này không tự cập nhật được: {{because}}",
       },
       doctor: {
