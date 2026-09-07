@@ -21,8 +21,12 @@ describe("parseMixEngineTabState", () => {
     expect(parseMixEngineTabState({ screen: "extensions" })?.screen).toBe("extensions");
   });
 
-  it("rejects a fourth screen and garbage", () => {
-    expect(parseMixEngineTabState({ screen: "metrics" })).toBeUndefined();
+  it("accepts metrics", () => {
+    expect(parseMixEngineTabState({ screen: "metrics" })?.screen).toBe("metrics");
+  });
+
+  it("rejects a screen this build has never heard of, and garbage", () => {
+    expect(parseMixEngineTabState({ screen: "quantum_flux" })).toBeUndefined();
     expect(parseMixEngineTabState("dashboard")).toBeUndefined();
     expect(parseMixEngineTabState(null)).toBeUndefined();
     expect(parseMixEngineTabState([])).toBeUndefined();

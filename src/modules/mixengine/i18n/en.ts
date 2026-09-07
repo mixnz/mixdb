@@ -12,6 +12,7 @@ export default {
       logs: "Logs",
       blueprints: "Blueprints",
       extensions: "Extensions",
+      metrics: "Metrics",
       settings: "Settings",
     },
     // The three states in front of a daemon that is not answering. Each says what to do next,
@@ -255,6 +256,14 @@ export default {
         durationLabel: "Minutes (blank = no expiry)",
         noExpiry: "No expiry",
       },
+    },
+    metrics: {
+      subject: "Show",
+      daemon: "MixEngine daemon",
+      cpu: "CPU",
+      rss: "Memory (RSS)",
+      empty: "No history yet for this subject.",
+      retention: "History kept for {{hours}}h",
     },
     domains: {
       columnDomain: "Domain",

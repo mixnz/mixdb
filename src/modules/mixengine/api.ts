@@ -29,6 +29,8 @@ import type { ExtensionChange } from "./api/types/ExtensionChange";
 import type { JobSummary } from "./api/types/JobSummary";
 import type { DiskUsage } from "./api/types/DiskUsage";
 import type { CleanupQuery } from "./api/types/CleanupQuery";
+import type { MetricsHistory } from "./api/types/MetricsHistory";
+import type { MetricsHistoryQuery } from "./api/types/MetricsHistoryQuery";
 import type { PackageList } from "./api/types/PackageList";
 import type { PackageCatalogue } from "./api/types/PackageCatalogue";
 import type { PackageTarget } from "./api/types/PackageTarget";
@@ -417,4 +419,8 @@ export function diskUsage(refresh: boolean): Promise<DiskUsage> {
 
 export function cleanup(query: CleanupQuery): Promise<JobSummary> {
   return invoke<JobSummary>("mixengine_cleanup", { params: query });
+}
+
+export function metricsHistory(query: MetricsHistoryQuery): Promise<MetricsHistory> {
+  return invoke<MetricsHistory>("mixengine_metrics_history", { params: query });
 }

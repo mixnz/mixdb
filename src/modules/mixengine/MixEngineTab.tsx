@@ -12,6 +12,7 @@ import Dashboard from "./screens/Dashboard";
 import Domains from "./screens/Domains";
 import Extensions from "./screens/Extensions";
 import Logs from "./screens/Logs";
+import Metrics from "./screens/Metrics";
 import Projects from "./screens/Projects";
 import Runtimes from "./screens/Runtimes";
 import ServicesDetail from "./screens/ServicesDetail";
@@ -155,6 +156,7 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
         {pane("logs", (active) => <Logs active={active} />)}
         {pane("blueprints", (active) => <Blueprints active={active} />)}
         {pane("extensions", (active) => <Extensions active={active} />)}
+        {pane("metrics", (active) => <Metrics active={active} />)}
       </div>
     </div>
   );

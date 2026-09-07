@@ -3,7 +3,7 @@ import type { MixEngineScreen } from "../../tabState";
 import styles from "./Sidebar.module.css";
 
 /**
- * Chín mục cố định của `client-surface.md`, cộng một mục MixDB tự thêm.
+ * Chín mục cố định của `client-surface.md`, cộng hai mục MixDB tự thêm (`projects`, `metrics`).
  *
  * **`projects` không nằm trong 9 màn hình `client-surface.md` liệt kê.** `client-surface.md` không
  * dựng Projects thành một màn hình riêng — nó giả định một client hỏi `project.list` cho đúng một
@@ -13,8 +13,13 @@ import styles from "./Sidebar.module.css";
  * `docs/superpowers/specs/2026-09-06-mixengine-runtimes-services-logs-design.md`. Đặt ngay sau
  * Dashboard vì nó là thứ Sites cần trước.
  *
- * **Sáu mục còn lại xám, không ẩn hẳn.** Một mục biến mất khỏi danh sách không nói gì cả và không ai
- * biết còn sáu màn hình nữa đang tới; một mục xám không bấm được là một lời hứa còn giữ được — cùng
+ * **`metrics` cũng không nằm trong 9 màn hình đó** — `client-surface.md` gộp CPU%/RSS "bây giờ" vào
+ * Dashboard, không đòi một màn riêng. MixDB tách lịch sử 24 giờ ra một mục sidebar của riêng nó (D1,
+ * `docs/superpowers/specs/2026-09-07-mixengine-metrics-settings-design.md`) vì đây là dữ liệu khác
+ * hình dạng (biểu đồ theo thời gian, không phải một hàng trong bảng service).
+ *
+ * **Chỉ còn Settings xám, không ẩn hẳn.** Một mục biến mất khỏi danh sách không nói gì cả và không
+ * ai biết còn màn hình nào đang tới; một mục xám không bấm được là một lời hứa còn giữ được — cùng
  * luật Pha 1 đã theo cho Dashboard/Services.
  */
 const ITEMS: readonly { screen: MixEngineScreen | null; labelKey: TranslationKey }[] = [
@@ -27,6 +32,7 @@ const ITEMS: readonly { screen: MixEngineScreen | null; labelKey: TranslationKey
   { screen: "logs", labelKey: "mixengine.sidebar.logs" },
   { screen: "blueprints", labelKey: "mixengine.sidebar.blueprints" },
   { screen: "extensions", labelKey: "mixengine.sidebar.extensions" },
+  { screen: "metrics", labelKey: "mixengine.sidebar.metrics" },
   { screen: null, labelKey: "mixengine.sidebar.settings" },
 ];
 

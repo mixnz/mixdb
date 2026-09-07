@@ -425,6 +425,12 @@ pub async fn mixengine_cleanup(params: Value) -> Result<Value, AppError> {
     rpc::call("daemon.cleanup", params).await
 }
 
+/// `metrics.history` — đọc thường, không cần stream. Màn Metrics dựng trên đúng call này.
+#[tauri::command]
+pub async fn mixengine_metrics_history(params: Value) -> Result<Value, AppError> {
+    rpc::call("metrics.history", params).await
+}
+
 /// `blueprint.list` — mọi blueprint home này giữ, theo thứ tự slug.
 #[tauri::command]
 pub async fn mixengine_blueprints() -> Result<Value, AppError> {

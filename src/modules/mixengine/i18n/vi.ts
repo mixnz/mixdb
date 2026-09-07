@@ -14,6 +14,7 @@ const vi: typeof en = {
       logs: "Logs",
       blueprints: "Blueprints",
       extensions: "Extensions",
+      metrics: "Metrics",
       settings: "Settings",
     },
     gate: {
@@ -253,6 +254,14 @@ const vi: typeof en = {
         durationLabel: "Số phút (để trống = không hết hạn)",
         noExpiry: "Không hết hạn",
       },
+    },
+    metrics: {
+      subject: "Xem",
+      daemon: "Daemon MixEngine",
+      cpu: "CPU",
+      rss: "Bộ nhớ (RSS)",
+      empty: "Chưa có lịch sử cho mục này.",
+      retention: "Giữ lịch sử {{hours}} giờ",
     },
     domains: {
       columnDomain: "Domain",

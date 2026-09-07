@@ -14,7 +14,8 @@ export type MixEngineScreen =
   | "servicesDetail"
   | "logs"
   | "blueprints"
-  | "extensions";
+  | "extensions"
+  | "metrics";
 
 export interface MixEngineTabState {
   screen: MixEngineScreen;
@@ -30,6 +31,7 @@ const SCREENS: readonly MixEngineScreen[] = [
   "logs",
   "blueprints",
   "extensions",
+  "metrics",
 ];
 
 /** Slot shell trả lại từ lần chạy trước, đã kiểm. `undefined` nghĩa là không dùng được. */
