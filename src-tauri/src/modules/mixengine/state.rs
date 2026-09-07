@@ -58,6 +58,37 @@ impl LogsState {
     }
 }
 
+/// Đúng một stream `/metrics` đang mở — riêng với `MixEngineState`/`LogsState`, vì Dashboard giữ
+/// `/events` **và** `/metrics` cùng lúc: gộp chung với một trong hai sẽ để một cái giành khoá của
+/// cái kia. Không tái dùng `LogsState` cho việc này dù cùng là "một stream" — `/logs/{id}` và
+/// `/metrics` có thể cùng mở một lúc khi Logs và Dashboard cùng ở trạng thái đã-xem-qua
+/// (`mountedScreens` giữ mọi màn trong DOM).
+///
+/// **Đóng stream này có ý nghĩa khác đóng hai cái kia.** `/events`/`/logs` đóng vì không ai đọc nữa;
+/// `/metrics` đóng còn đổi hành vi của daemon — mở kết nối này khiến daemon lấy mẫu 1 Hz, đóng nó
+/// trả daemon về 1 lần/phút. `stop()` ở đây phải được gọi đúng lúc Dashboard không còn `active`,
+/// không chỉ lúc unmount.
+#[derive(Default)]
+pub struct MetricsState {
+    open: Mutex<Option<CancellationToken>>,
+}
+
+impl MetricsState {
+    pub fn keep(&self, token: CancellationToken) {
+        let mut slot = self.open.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(previous) = slot.replace(token) {
+            previous.cancel();
+        }
+    }
+
+    pub fn stop(&self) {
+        let mut slot = self.open.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(token) = slot.take() {
+            token.cancel();
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

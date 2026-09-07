@@ -395,6 +395,23 @@ pub fn mixengine_logs_unwatch(state: State<'_, super::state::LogsState>) {
     state.stop();
 }
 
+/// Mở `GET /metrics`. **Mở kết nối này chính là subscribe** — daemon lấy mẫu 1 Hz trong lúc còn mở,
+/// 1 lần/phút khi không ai giữ. Gọi từ Dashboard đúng lúc `active` chuyển `true`, đóng lại đúng lúc
+/// nó chuyển `false` — không mở suốt đời app như `mixengine_watch`/`/events`, xem `MetricsState`.
+#[tauri::command]
+pub async fn mixengine_metrics_watch(
+    on_frame: Channel<String>,
+    state: State<'_, super::state::MetricsState>,
+) -> Result<(), AppError> {
+    super::metrics::stream_metrics(on_frame, &state).await
+}
+
+/// Đóng stream `/metrics` đang mở. Gọi khi không có gì mở là vô hại.
+#[tauri::command]
+pub fn mixengine_metrics_unwatch(state: State<'_, super::state::MetricsState>) {
+    state.stop();
+}
+
 /// `blueprint.list` — mọi blueprint home này giữ, theo thứ tự slug.
 #[tauri::command]
 pub async fn mixengine_blueprints() -> Result<Value, AppError> {

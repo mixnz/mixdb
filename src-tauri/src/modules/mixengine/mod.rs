@@ -6,6 +6,7 @@ pub mod endpoint;
 pub mod events;
 pub mod health;
 pub mod logs;
+pub mod metrics;
 pub mod open_in_mixdb;
 pub mod rpc;
 pub mod sse;
@@ -18,4 +19,5 @@ pub fn register<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Builder
     builder
         .manage(state::MixEngineState::default())
         .manage(state::LogsState::default())
+        .manage(state::MetricsState::default())
 }
