@@ -412,6 +412,19 @@ pub fn mixengine_metrics_unwatch(state: State<'_, super::state::MetricsState>) {
     state.stop();
 }
 
+/// `daemon.disk_usage` — `refresh: false` đọc bản daemon giữ (tới một phút), `true` đi bộ đĩa lại.
+#[tauri::command]
+pub async fn mixengine_disk_usage(refresh: bool) -> Result<Value, AppError> {
+    rpc::call("daemon.disk_usage", json!({ "refresh": refresh })).await
+}
+
+/// `daemon.cleanup` — trả một `JobSummary`, tiến độ theo dõi qua `/events` chung như mọi job khác,
+/// không có hạ tầng riêng.
+#[tauri::command]
+pub async fn mixengine_cleanup(params: Value) -> Result<Value, AppError> {
+    rpc::call("daemon.cleanup", params).await
+}
+
 /// `blueprint.list` — mọi blueprint home này giữ, theo thứ tự slug.
 #[tauri::command]
 pub async fn mixengine_blueprints() -> Result<Value, AppError> {

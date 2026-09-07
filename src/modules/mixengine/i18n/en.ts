@@ -51,6 +51,23 @@ export default {
       noServices: "Nothing is set up yet.",
       job: "Working",
       elevationWaiting: "{{count}} waiting for an administrator",
+      diskUsage: {
+        title: "Disk usage",
+        measuredAt: "measured at {{time}}",
+        refresh: "Refresh",
+        cleanup: "Clean up",
+        other: "Everything else: {{size}}",
+        unreadable: "Part of this could not be read: {{reason}}",
+        reclaimByCleanup: "{{size}} could be reclaimed here",
+        cleanupKeep: "Leave {{category}} alone",
+        category: {
+          runtimes: "Runtimes",
+          data: "Data",
+          logs: "Logs",
+          certs: "Certificates",
+          cache: "Cache",
+        },
+      },
     },
     elevation: {
       title: "MixEngine needs an administrator",

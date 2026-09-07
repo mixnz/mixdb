@@ -49,6 +49,23 @@ const vi: typeof en = {
       noServices: "Chưa có gì được dựng.",
       job: "Đang chạy",
       elevationWaiting: "{{count}} thao tác đang chờ quyền quản trị",
+      diskUsage: {
+        title: "Dung lượng đĩa",
+        measuredAt: "đo lúc {{time}}",
+        refresh: "Làm mới",
+        cleanup: "Dọn dẹp",
+        other: "Còn lại: {{size}}",
+        unreadable: "Một phần không đọc được: {{reason}}",
+        reclaimByCleanup: "Có thể dọn {{size}} ở đây",
+        cleanupKeep: "Giữ nguyên {{category}}",
+        category: {
+          runtimes: "Runtimes",
+          data: "Dữ liệu",
+          logs: "Logs",
+          certs: "Chứng chỉ",
+          cache: "Cache",
+        },
+      },
     },
     elevation: {
       title: "MixEngine cần quyền quản trị",

@@ -6,6 +6,7 @@ import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { DaemonStatus } from "../../api/types/DaemonStatus";
+import type { DiskUsage } from "../../api/types/DiskUsage";
 import ElevationDialog from "../../components/ElevationDialog";
 import ServiceForm from "../../components/ServiceForm";
 import {
@@ -27,6 +28,8 @@ import {
 } from "../../metricsState";
 import { pendingFrom } from "../../pendingOps";
 import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
+import CleanupDialog from "./CleanupDialog";
+import DiskUsagePanel from "./DiskUsagePanel";
 import styles from "./Dashboard.module.css";
 
 /* Bảng tra tường minh chứ không ghép `${action}ing`: "stop" + "ing" ra "stoping", và một khoá dịch
@@ -53,6 +56,9 @@ export default function Dashboard({ active }: { active: boolean }) {
   const [jobs, setJobs] = useState<JobRow[]>([]);
   /** Frame mới nhất của `/metrics`, hoặc `null` khi chưa có (stream chưa mở, hay chưa nhận frame nào). */
   const [frame, setFrame] = useState<MetricsFrame | null>(null);
+  const [disk, setDisk] = useState<DiskUsage | null>(null);
+  const [refreshingDisk, setRefreshingDisk] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   /** Service nào đang có một hành động bay, và là hành động nào. Khoá theo id. */
@@ -66,13 +72,31 @@ export default function Dashboard({ active }: { active: boolean }) {
      một tab đứng im, rỗng, không nói gì là kết cục tệ hơn bất kỳ thông báo nào. */
   const reload = useCallback(async () => {
     try {
-      const [next, list] = await Promise.all([api.status(), api.services()]);
+      const [next, list, usage] = await Promise.all([
+        api.status(),
+        api.services(),
+        api.diskUsage(false),
+      ]);
       setStatus(next);
       setRows(rowsFrom(list.services));
       setWaiting(next.elevation?.pending ?? 0);
+      setDisk(usage);
       setError("");
     } catch (e) {
       setError(errorMessage(t, e));
+    }
+  }, [t]);
+
+  /** Nút "Làm mới" của bảng disk usage — `refresh: true` đi bộ đĩa lại, khác `reload()` ở trên vốn
+   *  đọc bản daemon giữ sẵn (tới một phút) để không biến mỗi lần quay lại tab thành một lần đi bộ. */
+  const refreshDisk = useCallback(async () => {
+    setRefreshingDisk(true);
+    try {
+      setDisk(await api.diskUsage(true));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    } finally {
+      setRefreshingDisk(false);
     }
   }, [t]);
 
@@ -368,6 +392,21 @@ export default function Dashboard({ active }: { active: boolean }) {
       </div>
 
       {rows.length === 0 && <p className={styles.empty}>{t("mixengine.dashboard.noServices")}</p>}
+
+      <DiskUsagePanel
+        disk={disk}
+        refreshing={refreshingDisk}
+        onRefresh={() => void refreshDisk()}
+        onCleanup={() => setCleaning(true)}
+      />
+
+      {cleaning && disk && (
+        <CleanupDialog
+          disk={disk}
+          onCancel={() => setCleaning(false)}
+          onStarted={() => setCleaning(false)}
+        />
+      )}
 
       {/* Chỉ dựng khi có hàng nào mở nó ra — mà hiện chưa hàng nào mở được, vì `canOpenDataDir`
           còn trả `false`. Phần khung để sẵn ở đây nên lúc daemon có đường dẫn thì không phải nghĩ
