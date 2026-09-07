@@ -7,6 +7,7 @@ import * as api from "../../api";
 import type { Browsers } from "../../api/types/Browsers";
 import type { CaStatus } from "../../api/types/CaStatus";
 import type { Trust } from "../../api/types/Trust";
+import ElevationDialog from "../../components/ElevationDialog";
 import styles from "./CaBlock.module.css";
 
 type Translate = ReturnType<typeof useTranslation>["t"];
@@ -48,6 +49,7 @@ export default function CaBlock({ onError }: { onError: (message: string) => voi
   const { t } = useTranslation();
   const [status, setStatus] = useState<CaStatus | null>(null);
   const [repairing, setRepairing] = useState(false);
+  const [pending, setPending] = useState<unknown[] | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -61,11 +63,21 @@ export default function CaBlock({ onError }: { onError: (message: string) => voi
     void reload();
   }, [reload]);
 
+  /**
+   * Luồng hai lượt T64: enqueue trước với `grant: false`, xong đọc `elevation.status` — có gì chờ
+   * thì hiện `ElevationDialog` cho người dùng xem trước khi bật prompt hệ điều hành; không có gì
+   * (sửa NSS database không cần quyền trên máy này) thì chỉ đọc lại trạng thái.
+   */
   async function repair() {
     setRepairing(true);
     try {
-      await api.caRepair();
-      await reload();
+      await api.caRepair({ grant: false });
+      const queue = await api.elevationStatus();
+      if (queue.pending.length > 0) {
+        setPending(queue.pending);
+      } else {
+        await reload();
+      }
     } catch (e) {
       onError(errorMessage(t, e));
     } finally {
@@ -112,6 +124,16 @@ export default function CaBlock({ onError }: { onError: (message: string) => voi
           {repairing ? t("mixengine.domains.ca.repairing") : t("mixengine.domains.ca.repair")}
         </Button>
       </div>
+
+      {pending && (
+        <ElevationDialog
+          pending={pending}
+          onClose={() => {
+            setPending(null);
+            void reload();
+          }}
+        />
+      )}
     </section>
   );
 }

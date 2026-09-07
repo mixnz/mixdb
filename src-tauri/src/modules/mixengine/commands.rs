@@ -217,12 +217,12 @@ pub async fn mixengine_ca_status() -> Result<Value, AppError> {
     rpc::call("cert.ca_status", json!({})).await
 }
 
-/// Sửa nửa "trình duyệt" của CA. `grant: true` cứng — giả định của plan Pha 2: sửa NSS database
-/// không cần quyền quản trị. Nếu đo trên daemon thật thấy sai, đổi sang luồng hai bước như
-/// `elevation.*` ở Dashboard.
+/// Sửa nửa "trình duyệt" của CA. `params` đúng hình `DoctorRepair { grant }` — giả định ban đầu
+/// rằng sửa NSS database không cần quyền quản trị đã sai trên máy thật, nên gọi lại đúng luồng hai
+/// bước T64 giống `mixengine_doctor_repair`/`elevation.*` ở Dashboard, thay vì hard-code `grant: true`.
 #[tauri::command]
-pub async fn mixengine_ca_repair() -> Result<Value, AppError> {
-    rpc::call("daemon.doctor_repair", json!({ "grant": true })).await
+pub async fn mixengine_ca_repair(params: Value) -> Result<Value, AppError> {
+    rpc::call("daemon.doctor_repair", params).await
 }
 
 /// Bỏ trống `domain` để cấp cho mọi site có khai HTTPS — cùng một call vẽ bảng lẫn cấp lại.

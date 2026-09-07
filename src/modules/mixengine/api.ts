@@ -220,8 +220,10 @@ export function caStatus(): Promise<CaStatus> {
   return invoke<CaStatus>("mixengine_ca_status");
 }
 
-export function caRepair(): Promise<unknown> {
-  return invoke("mixengine_ca_repair");
+/** Luồng hai lượt T64, giống `doctorRepair`: `grant: false` để enqueue, đọc `elevation.status`
+ *  rồi mới `elevation.grant` sau khi người dùng đã xem hàng đợi — xem `CaBlock.tsx`. */
+export function caRepair(input: DoctorRepair): Promise<unknown> {
+  return invoke("mixengine_ca_repair", { params: input });
 }
 
 /** Bỏ trống `domain` để cấp cho mọi site có khai HTTPS — cùng một call vẽ bảng lẫn cấp lại. */
