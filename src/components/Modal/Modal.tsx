@@ -36,7 +36,7 @@ interface ModalProps {
  * establishes a containing block for it.
  */
 function Modal({ label, onClose, locked, overlayClassName, className, children }: ModalProps) {
-  const { close, cls } = useDialogExit();
+  const { close, cls, onEntered } = useDialogExit();
   const dialog = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -98,6 +98,7 @@ function Modal({ label, onClose, locked, overlayClassName, className, children }
            restore above has something to take it from. Not a Tab stop — see `FOCUSABLE`. */
         tabIndex={-1}
         onKeyDown={trapTab}
+        onAnimationEnd={onEntered}
       >
         {children(close)}
       </div>

@@ -46,7 +46,21 @@ export function useDialogExit() {
   useEffect(() => enterModal(), []);
 
   const [closing, setClosing] = useState(false);
+  const [settled, setSettled] = useState(false);
   const answer = useRef<(() => void) | null>(null);
+
+  /**
+   * Fires once `dialog-in` has run its course. `transform: translate(-50%, -50%)` is meant to
+   * recompute against the dialog's own size on every layout — that is the whole trick behind
+   * centring it with no JS — but at least one WebKit build keeps the value the entrance animation
+   * last interpolated instead, and never re-resolves it once a control inside the dialog (a
+   * disclosure opening, say) changes its height. The dialog then sits off-centre until something
+   * unrelated forces a style recalc (a hover, a resize). `animation-fill-mode: both` is exactly
+   * the mechanism that leaves a value "held" past the animation's end, so once it has served its
+   * purpose the fix is to take the animation off the element entirely — `.settled` below — which
+   * hands `transform` back to the plain, always-live rule in `surface.module.css`.
+   */
+  const onEntered = useCallback(() => setSettled(true), []);
 
   /** Starts the exit; `reply` is called once it finishes. First call wins — a second Escape, or a
       click on the overlay behind a dialog already on its way out, is ignored. */
@@ -64,11 +78,18 @@ export function useDialogExit() {
     return () => window.clearTimeout(id);
   }, [closing]);
 
-  /** Wraps a class in the shared `closing` marker while the dialog animates out. */
+  /** Wraps a class in the shared `closing`/`settled` marker — `closing` while the dialog animates
+   *  out, `settled` once the entrance animation has finished and stays that way until it does. The
+   *  two never apply together: closing starts fresh from whatever `settled` was, and `.closing.dialog`
+   *  in `dialogMotion.module.css` takes the animation back over regardless. */
   const cls = useCallback(
-    (base: string) => (closing ? `${base} ${styles.closing}` : base),
-    [closing],
+    (base: string) => {
+      if (closing) return `${base} ${styles.closing}`;
+      if (settled) return `${base} ${styles.settled}`;
+      return base;
+    },
+    [closing, settled],
   );
 
-  return { closing, close, cls };
+  return { closing, close, cls, onEntered };
 }
