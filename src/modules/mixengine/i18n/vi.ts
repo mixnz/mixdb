@@ -43,6 +43,7 @@ const vi: typeof en = {
       starting: "Đang bật…",
       stopping: "Đang tắt…",
       restarting: "Đang khởi động lại…",
+      reload: "Làm mới",
       stopAll: "Tắt tất cả",
       rowMenu: "Thêm hành động",
       noDataDir: "MixEngine chưa cho biết thư mục dữ liệu của một service nằm ở đâu.",

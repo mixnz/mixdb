@@ -45,6 +45,7 @@ export default {
       starting: "Starting…",
       stopping: "Stopping…",
       restarting: "Restarting…",
+      reload: "Reload",
       stopAll: "Stop all",
       rowMenu: "More actions",
       noDataDir: "MixEngine does not report where a service keeps its data yet.",

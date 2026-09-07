@@ -263,6 +263,10 @@ export default function Dashboard({ active }: { active: boolean }) {
           thêm mỗi lần một field trạng thái mới được thêm vào. */}
       <div className={styles.headerActions}>
         <div className={styles.headerButtons}>
+          {/* Đường dự phòng thủ công cho đúng lỗ hổng comment `reload` ở trên đã nêu: một service
+              được tạo/xoá từ nơi khác (CLI, một tab MixDB khác) không sinh sự kiện nào cho bảng này
+              biết — quay lại tab là đường dự phòng tự động, nút này là đường dự phòng chủ động. */}
+          <button onClick={() => void reload()}>{t("mixengine.dashboard.reload")}</button>
           {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
           <button
             onClick={() =>
