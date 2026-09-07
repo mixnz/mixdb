@@ -12,8 +12,14 @@ import { formatPins } from "../../projectPins";
 import ProjectForm from "./ProjectForm";
 import styles from "./Projects.module.css";
 
+interface Props {
+  active: boolean;
+  /** Chuyển sang màn Sites, lọc sẵn theo project này — xem `sitesNavigation.ts`. */
+  onOpenSites: (project: string) => void;
+}
+
 /** Mọi project đã đăng ký trong home — tạo, sửa (tên/root/pin/keep_warm), xoá. */
-export default function Projects({ active }: { active: boolean }) {
+export default function Projects({ active, onOpenSites }: Props) {
   const [rows, setRows] = useState<ProjectSummary[]>([]);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -96,6 +102,9 @@ export default function Projects({ active }: { active: boolean }) {
                 <td>{row.manifest ? "✓" : "—"}</td>
                 <td>{row.keep_warm ? "✓" : "—"}</td>
                 <td className={styles.rowActions}>
+                  <Button onClick={() => onOpenSites(row.name)}>
+                    {t("mixengine.projects.openSites")}
+                  </Button>
                   <Button onClick={() => void edit(row.name)}>{t("mixengine.projects.edit")}</Button>
                   <Button onClick={() => setDeleting(row.name)}>
                     {t("mixengine.projects.delete")}
@@ -134,8 +143,9 @@ export default function Projects({ active }: { active: boolean }) {
       {creating && (
         <ProjectForm
           onCancel={() => setCreating(false)}
-          onSaved={() => {
+          onSaved={(warning) => {
             setCreating(false);
+            if (warning) setError(warning);
             void reload();
           }}
         />

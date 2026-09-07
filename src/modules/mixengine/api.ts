@@ -27,6 +27,10 @@ import type { RuntimeExtension } from "./api/types/RuntimeExtension";
 import type { ExtensionChoice } from "./api/types/ExtensionChoice";
 import type { ExtensionChange } from "./api/types/ExtensionChange";
 import type { JobSummary } from "./api/types/JobSummary";
+import type { DiskUsage } from "./api/types/DiskUsage";
+import type { CleanupQuery } from "./api/types/CleanupQuery";
+import type { MetricsHistory } from "./api/types/MetricsHistory";
+import type { MetricsHistoryQuery } from "./api/types/MetricsHistoryQuery";
 import type { PackageList } from "./api/types/PackageList";
 import type { PackageCatalogue } from "./api/types/PackageCatalogue";
 import type { PackageTarget } from "./api/types/PackageTarget";
@@ -57,6 +61,18 @@ import type { ExtensionPlan } from "./api/types/ExtensionPlan";
 import type { ExtensionInstall } from "./api/types/ExtensionInstall";
 import type { ExtensionUninstall } from "./api/types/ExtensionUninstall";
 import type { ExtensionRemoval } from "./api/types/ExtensionRemoval";
+import type { AutostartReport } from "./api/types/AutostartReport";
+import type { UpdateStatus } from "./api/types/UpdateStatus";
+import type { UpdateCheck } from "./api/types/UpdateCheck";
+import type { UpdateDecide } from "./api/types/UpdateDecide";
+import type { UpdateApply } from "./api/types/UpdateApply";
+import type { UpdateApplied } from "./api/types/UpdateApplied";
+import type { DoctorReport } from "./api/types/DoctorReport";
+import type { DoctorRepair } from "./api/types/DoctorRepair";
+import type { RepairReport } from "./api/types/RepairReport";
+import type { UninstallQuery } from "./api/types/UninstallQuery";
+import type { UninstallReport } from "./api/types/UninstallReport";
+import type { BundleReport } from "./api/types/BundleReport";
 
 /**
  * Chỗ duy nhất module này gọi `invoke()`.
@@ -394,4 +410,81 @@ export function extensionStart(id: string): Promise<unknown> {
 
 export function extensionStop(id: string): Promise<unknown> {
   return invoke("mixengine_extension_stop", { id });
+}
+
+/** Mở `GET /metrics`. Cùng khuôn `logsWatch` — một `Channel` mới, người gọi tự parse JSON thô.
+ *  **Mở kết nối này chính là subscribe**: gọi đúng lúc màn hình cần số "bây giờ", đóng lại bằng
+ *  `metricsUnwatch()` ngay khi không còn cần — không mở suốt đời app như `watch()`/`/events`. */
+export function metricsWatch(onFrame: (raw: string) => void): Promise<void> {
+  const channel = new Channel<string>();
+  channel.onmessage = onFrame;
+  return invoke("mixengine_metrics_watch", { onFrame: channel });
+}
+
+export function metricsUnwatch(): Promise<void> {
+  return invoke("mixengine_metrics_unwatch");
+}
+
+export function diskUsage(refresh: boolean): Promise<DiskUsage> {
+  return invoke<DiskUsage>("mixengine_disk_usage", { refresh });
+}
+
+export function cleanup(query: CleanupQuery): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_cleanup", { params: query });
+}
+
+export function metricsHistory(query: MetricsHistoryQuery): Promise<MetricsHistory> {
+  return invoke<MetricsHistory>("mixengine_metrics_history", { params: query });
+}
+
+export function autostartStatus(): Promise<AutostartReport> {
+  return invoke<AutostartReport>("mixengine_autostart_status");
+}
+
+export function autostartEnable(): Promise<AutostartReport> {
+  return invoke<AutostartReport>("mixengine_autostart_enable");
+}
+
+export function autostartDisable(): Promise<AutostartReport> {
+  return invoke<AutostartReport>("mixengine_autostart_disable");
+}
+
+export function updateStatus(): Promise<UpdateStatus> {
+  return invoke<UpdateStatus>("mixengine_update_status");
+}
+
+export function updateCheck(input: UpdateCheck): Promise<UpdateStatus> {
+  return invoke<UpdateStatus>("mixengine_update_check", { params: input });
+}
+
+export function updateDecide(input: UpdateDecide): Promise<UpdateStatus> {
+  return invoke<UpdateStatus>("mixengine_update_decide", { params: input });
+}
+
+/** Daemon tự thoát ngay sau khi trả lời — kết nối đóng theo sau là thành công, không phải lỗi. */
+export function updateApply(input: UpdateApply): Promise<UpdateApplied> {
+  return invoke<UpdateApplied>("mixengine_update_apply", { params: input });
+}
+
+export function doctor(): Promise<DoctorReport> {
+  return invoke<DoctorReport>("mixengine_doctor");
+}
+
+/** `grant: false` (đường thường) enqueue vào đúng hàng đợi `elevation.status` chung — đọc lại đó để
+ *  biết có cần mở `ElevationDialog` không, không tự trả một dialog riêng. */
+export function doctorRepair(input: DoctorRepair): Promise<RepairReport> {
+  return invoke<RepairReport>("mixengine_doctor_repair", { params: input });
+}
+
+export function uninstallPlan(input: UninstallQuery): Promise<UninstallReport> {
+  return invoke<UninstallReport>("mixengine_uninstall_plan", { params: input });
+}
+
+/** Trả một `JobSummary` — theo dõi qua `jobStatus`, không phải `UninstallReport` trực tiếp. */
+export function uninstall(input: UninstallQuery): Promise<JobSummary> {
+  return invoke<JobSummary>("mixengine_uninstall", { params: input });
+}
+
+export function bundle(): Promise<BundleReport> {
+  return invoke<BundleReport>("mixengine_bundle");
 }

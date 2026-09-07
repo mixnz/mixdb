@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
 import Button from "../../../../components/Button";
@@ -10,36 +10,43 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { SiteDetail } from "../../api/types/SiteDetail";
 import type { SiteKind } from "../../api/types/SiteKind";
+import { joinDocRoot, parseDomains, relativeToRoot } from "../../siteState";
 import styles from "./SiteForm.module.css";
 
 type Kind = SiteKind["kind"];
 
-/** Tên hiển thị mỗi domain gõ vào, tách bằng dấu phẩy hoặc xuống dòng — đầu danh sách là chính. */
-function parseDomains(raw: string): string[] {
-  return raw
-    .split(/[,\n]/)
-    .map((d) => d.trim())
-    .filter((d) => d !== "");
-}
-
 interface Props {
   /** `undefined` = tạo mới. Có giá trị = sửa, khoá project lại. */
   initial?: SiteDetail;
+  /** Chọn sẵn khi tạo mới — Sites truyền project đang lọc, nếu có. Bỏ qua khi `initial` có giá trị. */
+  defaultProject?: string;
   onCancel: () => void;
   /** Gọi sau khi lưu xong — cha tự `reload()`. */
   onSaved: () => void;
 }
 
-export default function SiteForm({ initial, onCancel, onSaved }: Props) {
+export default function SiteForm({ initial, defaultProject, onCancel, onSaved }: Props) {
   const { t } = useTranslation();
   const editing = initial !== undefined;
 
-  const [projectNames, setProjectNames] = useState<string[] | null>(null);
+  const [projectNames, setProjectNames] = useState<string[]>([]);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
+  // `false` cho tới khi cả hai danh sách trên tới nơi — xem chỗ dùng nó ngay trước `return`.
+  const [listsReady, setListsReady] = useState(false);
 
   const [project, setProject] = useState(
-    editing && initial.site.owner.type === "project" ? initial.site.owner.name : "",
+    editing && initial.site.owner.type === "project"
+      ? initial.site.owner.name
+      : (defaultProject ?? ""),
   );
+  // Root của project sở hữu site — cho tạo mới, đọc lại mỗi khi đổi project (dưới); cho sửa,
+  // `SiteDetail.root` đã có sẵn, project bị khoá nên không đổi nữa. Chỉ để hiển thị: giá trị gửi
+  // lên daemon vẫn luôn là phần còn lại một mình (`docRoot`), đúng `SiteSummary.doc_root`.
+  const [projectRoot, setProjectRoot] = useState(editing ? initial.root : "");
+  // Đã có lần trả lời đầu tiên chưa — khác với `projectRoot !== ""`, vì "" là một câu trả lời hợp
+  // lệ (không project nào chọn, hoặc project rỗng thật). Chỉ chặn Modal ở lần đầu; đổi project sau
+  // khi Modal đã mở không đóng nó lại, xem chỗ dùng ngay trước `return`.
+  const [projectRootReady, setProjectRootReady] = useState(editing);
   const [domainsText, setDomainsText] = useState(editing ? initial.domains.join(", ") : "");
   const [docRoot, setDocRoot] = useState(editing ? initial.site.doc_root : "");
   const [kind, setKind] = useState<Kind>(editing ? initial.site.kind.kind : "php-fpm");
@@ -61,17 +68,63 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  // Dialog dài (nhiều field, danh sách service) cuộn được, nút Lưu ở cuối — lỗi vẽ ra ngay phía
+  // trên nút đó nhưng chèn thêm nội dung không tự kéo trình duyệt theo, nên không cuộn tới thì lỗi
+  // coi như vô hình. Cuộn theo `.actions`, không phải chính khối lỗi — cùng lý do/luật
+  // `ProjectForm.tsx` đã áp (`block: "end"` theo khối lỗi sẽ đẩy hai nút ra ngoài tầm nhìn).
+  useEffect(() => {
+    if (error !== "") actionsRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [error]);
 
   useEffect(() => {
     void Promise.all([api.projects(), api.services()]).then(([projectList, serviceList]) => {
       setProjectNames(projectList.projects.map((p) => p.name));
       setServiceIds(serviceList.services.map((s) => s.id));
+      setListsReady(true);
     });
   }, []);
 
+  // Chỉ cho tạo mới — sửa thì project bị khoá và `initial.root` đã là root đúng, không đổi nữa.
+  useEffect(() => {
+    if (editing) return;
+    if (project === "") {
+      setProjectRoot("");
+      setProjectRootReady(true);
+      return;
+    }
+    let live = true;
+    void api
+      .projectShow(project)
+      .then((detail) => {
+        if (!live) return;
+        setProjectRoot(detail.project.root);
+        setProjectRootReady(true);
+      })
+      .catch(() => {
+        if (!live) return;
+        setProjectRoot("");
+        setProjectRootReady(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [editing, project]);
+
   const domains = parseDomains(domainsText);
   const needsRiskyTldConsent = domains.some((d) => d.endsWith(".local"));
-  const noProjects = !editing && projectNames !== null && projectNames.length === 0;
+  const noProjects = !editing && projectNames.length === 0;
+
+  // Chưa đủ dữ liệu để biết hình dạng cuối cùng của form — chưa mở Modal. Không chờ thì danh sách
+  // service (rỗng lúc đầu, đầy sau khi `api.services()` trả lời) và dòng "Full path" (chờ
+  // `projectRoot`) nới chiều cao dialog ra đúng lúc animation mở nó còn đang chạy — dialog đang
+  // animate ở một chiều cao, giữa chừng lại cao thêm, và đó chính là chỗ modal "dứt vị trí lên
+  // trên" bị báo. `onEntered`/`.settled` (`dialogMotion.ts`) chỉ che được thay đổi *sau khi*
+  // animation xong; thay đổi *trong lúc* nó đang chạy thì phải tránh từ gốc, không phải che sau đó.
+  // Gọi cục bộ qua IPC nên thường xong trong một khung hình — một khoảng lặng rất ngắn trước khi mở
+  // còn tốt hơn một cái giật hình sau khi đã mở.
+  if (!listsReady || !projectRootReady) return null;
 
   function toggleService(id: string) {
     setSelectedServices((current) => {
@@ -95,9 +148,23 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
     }
   }
 
+  /**
+   * Dialog luôn trả một đường dẫn tuyệt đối — cắt bỏ phần project root trước khi lưu vào state, vì
+   * đó là hình dạng thật `SiteSummary.doc_root` giữ ("Relative to the project's root, as stored").
+   * Không cắt thì ô này hiện tuyệt đối ngay sau khi chọn nhưng lại hiện phần còn lại sau khi lưu
+   * rồi mở lại — hai lần hiện khác nhau cho cùng một site.
+   *
+   * `defaultPath` mở sẵn đúng chỗ đang chọn (root, hoặc root/doc_root hiện tại) để bấm Browse là
+   * đi thẳng vào project, không phải mò lại từ đầu ổ đĩa.
+   */
   async function browseDocRoot() {
-    const picked = await openDialog({ directory: true, multiple: false });
-    if (typeof picked === "string") setDocRoot(picked);
+    const picked = await openDialog({
+      directory: true,
+      multiple: false,
+      defaultPath: projectRoot === "" ? undefined : joinDocRoot(projectRoot, docRoot),
+    });
+    if (typeof picked !== "string") return;
+    setDocRoot(projectRoot === "" ? picked : relativeToRoot(projectRoot, picked));
   }
 
   async function submit() {
@@ -158,8 +225,8 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
                   <Select
                     value={project}
                     onChange={setProject}
-                    disabled={projectNames === null || saving}
-                    options={(projectNames ?? []).map((name) => ({ value: name, label: name }))}
+                    disabled={saving}
+                    options={projectNames.map((name) => ({ value: name, label: name }))}
                     placeholder={t("mixengine.sites.form.project")}
                   />
                 )}
@@ -201,6 +268,18 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
                   {t("common.browse")}
                 </Button>
               </div>
+              {/* Ô trên chỉ giữ phần còn lại sau root (đúng cái daemon lưu) — dòng này là chỗ
+                  duy nhất người dùng thấy root của project và đường dẫn đầy đủ thật sự là gì.
+                  `projectRoot` đã chắc chắn có giá trị cuối cùng trước khi Modal này được mở (xem
+                  `listsReady`/`projectRootReady` phía trên), nên render có điều kiện ở đây không
+                  còn đổi chiều cao dialog sau khi nó đã mở. */}
+              {projectRoot !== "" && (
+                <p className={styles.hint}>
+                  {t("mixengine.sites.form.docRootFull", {
+                    path: joinDocRoot(projectRoot, docRoot),
+                  })}
+                </p>
+              )}
             </label>
 
             <label className={styles.field}>
@@ -306,7 +385,7 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
             </div>
           )}
 
-          <div className={styles.actions}>
+          <div ref={actionsRef} className={styles.actions}>
             <Button size="large" onClick={() => close(onCancel)} disabled={saving}>
               {t("common.cancel")}
             </Button>

@@ -6,6 +6,7 @@ import { errorMessage } from "../../../../core/errors";
 import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { DaemonStatus } from "../../api/types/DaemonStatus";
+import type { DiskUsage } from "../../api/types/DiskUsage";
 import ElevationDialog from "../../components/ElevationDialog";
 import ServiceForm from "../../components/ServiceForm";
 import {
@@ -17,8 +18,19 @@ import {
   type ServiceRow,
 } from "../../daemonState";
 import { subscribeDaemonWatch } from "../../daemonWatch";
+import type { MetricsFrame } from "../../api/types/MetricsFrame";
+import {
+  DAEMON_SUBJECT,
+  formatBytes,
+  formatPercent,
+  metricsSubjectFor,
+  parseMetricsFrame,
+  readingFor,
+} from "../../metricsState";
 import { pendingFrom } from "../../pendingOps";
 import { serviceStateKey, serviceStateTone, toggleMode } from "../../serviceStateLabel";
+import CleanupDialog from "./CleanupDialog";
+import DiskUsagePanel from "./DiskUsagePanel";
 import styles from "./Dashboard.module.css";
 
 /* Bảng tra tường minh chứ không ghép `${action}ing`: "stop" + "ing" ra "stoping", và một khoá dịch
@@ -43,6 +55,11 @@ export default function Dashboard({ active }: { active: boolean }) {
   /** Có bao nhiêu thao tác chờ quyền, theo `daemon.status`. Chỉ là con số; danh sách ở `elevation.status`. */
   const [waiting, setWaiting] = useState(0);
   const [jobs, setJobs] = useState<JobRow[]>([]);
+  /** Frame mới nhất của `/metrics`, hoặc `null` khi chưa có (stream chưa mở, hay chưa nhận frame nào). */
+  const [frame, setFrame] = useState<MetricsFrame | null>(null);
+  const [disk, setDisk] = useState<DiskUsage | null>(null);
+  const [refreshingDisk, setRefreshingDisk] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   /** Service nào đang có một hành động bay, và là hành động nào. Khoá theo id. */
@@ -56,13 +73,31 @@ export default function Dashboard({ active }: { active: boolean }) {
      một tab đứng im, rỗng, không nói gì là kết cục tệ hơn bất kỳ thông báo nào. */
   const reload = useCallback(async () => {
     try {
-      const [next, list] = await Promise.all([api.status(), api.services()]);
+      const [next, list, usage] = await Promise.all([
+        api.status(),
+        api.services(),
+        api.diskUsage(false),
+      ]);
       setStatus(next);
       setRows(rowsFrom(list.services));
       setWaiting(next.elevation?.pending ?? 0);
+      setDisk(usage);
       setError("");
     } catch (e) {
       setError(errorMessage(t, e));
+    }
+  }, [t]);
+
+  /** Nút "Làm mới" của bảng disk usage — `refresh: true` đi bộ đĩa lại, khác `reload()` ở trên vốn
+   *  đọc bản daemon giữ sẵn (tới một phút) để không biến mỗi lần quay lại tab thành một lần đi bộ. */
+  const refreshDisk = useCallback(async () => {
+    setRefreshingDisk(true);
+    try {
+      setDisk(await api.diskUsage(true));
+    } catch (e) {
+      setError(errorMessage(t, e));
+    } finally {
+      setRefreshingDisk(false);
     }
   }, [t]);
 
@@ -115,6 +150,30 @@ export default function Dashboard({ active }: { active: boolean }) {
   useEffect(() => {
     if (active) void reload();
   }, [active, reload]);
+
+  /**
+   * `/metrics` khoá vòng đời theo `active`, không theo mount/unmount như `/events`.
+   *
+   * **Mở kết nối này chính là subscribe** — MixEngine lấy mẫu 1 Hz trong lúc còn ai giữ stream, 1
+   * lần/phút khi không. `MixEngineTab.tsx` giữ mọi màn đã-xem-qua ở trong DOM thay vì unmount lúc
+   * đổi tab, nên nếu khoá theo unmount, rời Dashboard sang màn khác sẽ không đóng được gì — daemon
+   * kẹt ở lấy mẫu nhanh vĩnh viễn dù không còn ai nhìn. Effect cleanup chạy cho cả hai trường hợp
+   * (`active` chuyển `false`, và unmount thật), nên khoá theo `active` là đủ cho cả hai.
+   */
+  useEffect(() => {
+    if (!active) return;
+    let live = true;
+    void api.metricsWatch((raw) => {
+      if (!live) return;
+      const next = parseMetricsFrame(raw);
+      if (next !== null) setFrame(next);
+    });
+    return () => {
+      live = false;
+      setFrame(null);
+      void api.metricsUnwatch();
+    };
+  }, [active]);
 
   useEffect(() => {
     return subscribeDaemonWatch((raw) => {
@@ -174,22 +233,6 @@ export default function Dashboard({ active }: { active: boolean }) {
         <header className={styles.header}>
           <strong>MixEngine {status.version}</strong>
           <span className={styles.home}>{status.home}</span>
-          {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
-          <button
-            onClick={() =>
-              void Promise.all(
-                rows.filter((row) => row.state === "running").map((row) => act(row.id, "stop")),
-              )
-            }
-            disabled={
-              rows.every((row) => row.state !== "running") || Object.keys(busy).length > 0
-            }
-          >
-            {t("mixengine.dashboard.stopAll")}
-          </button>
-          <button onClick={() => setCreating(true)}>
-            {t("mixengine.serviceForm.newService")}
-          </button>
           {/* Không tự bật hộp thoại lúc mở tab: một lô có thể nằm chờ nhiều ngày, và một modal bật
               lên mỗi lần mở tab là thứ người ta học cách bấm bỏ mà không đọc. Một dòng bấm được
               nói đúng điều cần nói. */}
@@ -198,8 +241,46 @@ export default function Dashboard({ active }: { active: boolean }) {
               {t("mixengine.dashboard.elevationWaiting", { count: waiting })}
             </button>
           )}
+          {/* Daemon không có `ServiceRow` — vẽ riêng khỏi bảng service, không chèn vào `rows`.
+              `.daemonUsage` đẩy nó sát bên phải header. */}
+          {(() => {
+            const daemon = readingFor(frame, DAEMON_SUBJECT);
+            return (
+              daemon && (
+                <span className={`${styles.home} ${styles.daemonUsage}`}>
+                  {t("mixengine.dashboard.daemonUsage", {
+                    cpu: daemon.cpu_percent === null ? "—" : formatPercent(daemon.cpu_percent),
+                    rss: formatBytes(daemon.rss_bytes),
+                  })}
+                </span>
+              )
+            );
+          })()}
         </header>
       )}
+
+      {/* Hàng riêng, xuống dưới header, hai nút sát bên phải — tách khỏi header để header không dài
+          thêm mỗi lần một field trạng thái mới được thêm vào. */}
+      <div className={styles.headerActions}>
+        <div className={styles.headerButtons}>
+          {/* Đường dự phòng thủ công cho đúng lỗ hổng comment `reload` ở trên đã nêu: một service
+              được tạo/xoá từ nơi khác (CLI, một tab MixDB khác) không sinh sự kiện nào cho bảng này
+              biết — quay lại tab là đường dự phòng tự động, nút này là đường dự phòng chủ động. */}
+          <button onClick={() => void reload()}>{t("mixengine.dashboard.reload")}</button>
+          {/* Không đổi hàng nào ở đây: bảng đổi khi `service_state_changed` tới, không khi bấm. */}
+          <button
+            onClick={() =>
+              void Promise.all(
+                rows.filter((row) => row.state === "running").map((row) => act(row.id, "stop")),
+              )
+            }
+            disabled={rows.every((row) => row.state !== "running") || Object.keys(busy).length > 0}
+          >
+            {t("mixengine.dashboard.stopAll")}
+          </button>
+          <button onClick={() => setCreating(true)}>{t("mixengine.serviceForm.newService")}</button>
+        </div>
+      </div>
 
       {jobs.length > 0 && (
         <ul className={styles.jobs}>
@@ -218,21 +299,27 @@ export default function Dashboard({ active }: { active: boolean }) {
           {/* Bề rộng khai ở đây chứ không để nội dung quyết — xem `table-layout: fixed` bên CSS.
               Tỉ lệ lấy từ bề rộng nội tại đo được của từng cột, không phải ước lượng. */}
           <colgroup>
-            <col style={{ width: "24%" }} />
-            <col style={{ width: "31%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "22%" }} />
+            <col style={{ width: "7%" }} />
             <col style={{ width: "9%" }} />
-            <col style={{ width: "36%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "34%" }} />
           </colgroup>
           <thead>
             <tr>
               <th>{t("mixengine.dashboard.service")}</th>
               <th>{t("mixengine.dashboard.state")}</th>
               <th>{t("mixengine.dashboard.port")}</th>
+              <th>{t("mixengine.dashboard.cpu")}</th>
+              <th>{t("mixengine.dashboard.rss")}</th>
               <th>{t("mixengine.dashboard.actions")}</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row) => {
+              const reading = readingFor(frame, metricsSubjectFor(row.id));
+              return (
               <tr key={row.id}>
                 {/* Cột cố định không nới ra cho một id dài, nên id đầy đủ ở lại trong `title`. */}
                 <td title={row.id}>{row.id}</td>
@@ -248,6 +335,15 @@ export default function Dashboard({ active }: { active: boolean }) {
                   )}
                 </td>
                 <td>{row.port ?? "—"}</td>
+                {/* Vắng mặt trong frame (chưa có stream, hay service chưa lọt vào lần đo) là "—",
+                    không phải 0% — một service rảnh và một service không đo được là hai câu khác
+                    nhau. `cpu_percent: null` trên chính sample cũng vẽ "—" vì cùng lý do đó. */}
+                <td>
+                  {reading === null || reading.cpu_percent === null
+                    ? "—"
+                    : formatPercent(reading.cpu_percent)}
+                </td>
+                <td>{reading === null ? "—" : formatBytes(reading.rss_bytes)}</td>
                 <td className={styles.actions}>
                   {/* Nghỉ thì là một cái đèn báo, chạm vào thì là một cái nút. Màu lúc nghỉ nói
                       *trạng thái* (cùng bảng với cột State), màu lúc hover nói *việc sắp làm*.
@@ -304,12 +400,28 @@ export default function Dashboard({ active }: { active: boolean }) {
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       {rows.length === 0 && <p className={styles.empty}>{t("mixengine.dashboard.noServices")}</p>}
+
+      <DiskUsagePanel
+        disk={disk}
+        refreshing={refreshingDisk}
+        onRefresh={() => void refreshDisk()}
+        onCleanup={() => setCleaning(true)}
+      />
+
+      {cleaning && disk && (
+        <CleanupDialog
+          disk={disk}
+          onCancel={() => setCleaning(false)}
+          onStarted={() => setCleaning(false)}
+        />
+      )}
 
       {/* Chỉ dựng khi có hàng nào mở nó ra — mà hiện chưa hàng nào mở được, vì `canOpenDataDir`
           còn trả `false`. Phần khung để sẵn ở đây nên lúc daemon có đường dẫn thì không phải nghĩ

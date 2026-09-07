@@ -1,6 +1,6 @@
 {
   "name": "@mixengine/api",
-  "version": "0.0.1-beta.1",
+  "version": "0.0.4",
   "description": "TypeScript types for the MixEngine daemon's JSON-RPC API, generated from mixengine-proto.",
   "license": "MIT OR Apache-2.0",
   "repository": {

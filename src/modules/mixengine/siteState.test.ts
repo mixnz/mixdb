@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { applySharingChange, canEditSite, formatRemaining, type SiteRow } from "./siteState";
+import {
+  applySharingChange,
+  canEditSite,
+  formatRemaining,
+  joinDocRoot,
+  relativeToRoot,
+  type SiteRow,
+} from "./siteState";
 
 describe("canEditSite", () => {
   it("a project-owned site can be edited", () => {
@@ -54,5 +61,47 @@ describe("formatRemaining", () => {
 
   it("clamps a past deadline to zero rather than going negative", () => {
     expect(formatRemaining(now - 5_000, now)).toBe("00:00");
+  });
+});
+
+describe("relativeToRoot", () => {
+  const root = "/Volumes/SSD/www/mixengine-test/demo.test";
+
+  it("strips the project root and its separator", () => {
+    expect(relativeToRoot(root, `${root}/public`)).toBe("public");
+  });
+
+  it("is empty when the picked folder is the root itself", () => {
+    expect(relativeToRoot(root, root)).toBe("");
+  });
+
+  /* Root chọn kèm dấu / cuối vẫn phải cắt đúng, không để lại một dấu / thừa ở đầu kết quả. */
+  it("tolerates a trailing separator on the root", () => {
+    expect(relativeToRoot(`${root}/`, `${root}/public`)).toBe("public");
+  });
+
+  it("keeps a nested path's own separators", () => {
+    expect(relativeToRoot(root, `${root}/public/assets`)).toBe("public/assets");
+  });
+
+  /* Không nằm dưới root — SiteCreate.doc_root chấp nhận cả tuyệt đối, giữ nguyên thay vì đoán. */
+  it("keeps a path outside the root as-is", () => {
+    expect(relativeToRoot(root, "/somewhere/else")).toBe("/somewhere/else");
+  });
+});
+
+describe("joinDocRoot", () => {
+  const root = "/Volumes/SSD/www/mixengine-test/demo.test";
+
+  it("is just the root when the relative part is empty", () => {
+    expect(joinDocRoot(root, "")).toBe(root);
+  });
+
+  it("joins root and the relative part with exactly one separator", () => {
+    expect(joinDocRoot(root, "public")).toBe(`${root}/public`);
+  });
+
+  it("tolerates a trailing separator on the root", () => {
+    expect(joinDocRoot(`${root}/`, "public")).toBe(`${root}/public`);
   });
 });

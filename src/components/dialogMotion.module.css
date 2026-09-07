@@ -49,6 +49,16 @@
   pointer-events: none;
 }
 
+/* Applied once `dialog-in` has run — see `useDialogExit`'s `onEntered`. Taking the animation off
+   the element entirely, rather than merely letting `animation-fill-mode: both` hold its endpoint,
+   is what keeps `transform: translate(-50%, -50%)` (declared once, plainly, in
+   `surface.module.css`) live: some WebKit builds do not re-resolve a transform's percentages
+   against a later layout change while an animation — even a finished one held by fill-mode — is
+   still the thing supplying the value. */
+.settled.dialog {
+  animation: none;
+}
+
 @keyframes overlay-in {
   from {
     opacity: 0;

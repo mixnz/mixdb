@@ -38,6 +38,40 @@ export function applySharingChange(rows: SiteRow[], raw: string): SiteRow[] {
   return rows.map((row) => (row.domain === domain ? { ...row, sharing } : row));
 }
 
+/** Tên hiển thị mỗi domain gõ vào, tách bằng dấu phẩy hoặc xuống dòng — đầu danh sách là chính.
+ *  Dùng chung giữa `SiteForm` và khối "tạo nhanh site" trong `ProjectForm`. */
+export function parseDomains(raw: string): string[] {
+  return raw
+    .split(/[,\n]/)
+    .map((d) => d.trim())
+    .filter((d) => d !== "");
+}
+
+/**
+ * Phần còn lại của một đường dẫn tuyệt đối sau khi bỏ project root — dùng ngay sau khi dialog chọn
+ * thư mục (luôn trả tuyệt đối) trả về, để field Doc root chỉ giữ đúng phần daemon thật sự lưu
+ * (`SiteSummary.doc_root`: "Relative to the project's root, as stored"). Không nằm dưới root thì
+ * giữ nguyên tuyệt đối — `SiteCreate.doc_root` chấp nhận cả hai, đây là trường hợp hiếm không đáng
+ * chặn.
+ */
+export function relativeToRoot(root: string, absolute: string): string {
+  const normalizedRoot = root.replace(/[\\/]+$/, "");
+  if (absolute === normalizedRoot) return "";
+  for (const separator of ["/", "\\"]) {
+    const prefix = `${normalizedRoot}${separator}`;
+    if (absolute.startsWith(prefix)) return absolute.slice(prefix.length);
+  }
+  return absolute;
+}
+
+/** Nối root với phần còn lại để hiển thị — chỉ để đọc, không phải giá trị gửi lên daemon (đó vẫn
+ *  là phần còn lại một mình). `""` là chính root, đúng nghĩa `SiteSummary.doc_root` ghi. */
+export function joinDocRoot(root: string, relative: string): string {
+  if (relative === "") return root;
+  const base = root.replace(/[\\/]+$/, "");
+  return `${base}/${relative}`;
+}
+
 /** `mm:ss`, hay `hh:mm:ss` một khi còn hơn một giờ. Quá hạn kẹp về 0, không âm. */
 export function formatRemaining(untilMs: number, nowMs: number = Date.now()): string {
   const totalSeconds = Math.max(0, Math.round((untilMs - nowMs) / 1000));
