@@ -3,12 +3,24 @@
 Kế hoạch dựng phần UI để quản lý **MixEngine** ngay trong MixDB. Viết 2026-09-06, trước khi có
 dòng code nào. Năm pha; mỗi pha tự chạy được và để lại một tab dùng được.
 
-**Trạng thái: Pha 0 và Pha 1 đã xong. Pha 2–4 chưa bắt đầu.**
+**Trạng thái (cập nhật 2026-09-07): Pha 0–3 đã xong. Pha 4 làm một phần — Blueprints và Extensions
+đã xong, còn nợ Metrics và Settings.**
 
 - Pha 0 — `91abac3`, `feat(db): save MixEngine handoffs as a keyring reference (#20)`, 2026-09-04,
   từ trước khi roadmap này được viết.
-- Pha 1 — nhánh `feat/mixengine-transport`, 2026-09-06. Spec:
+- Pha 1 — `898f936`, `feat(mixengine): manage the local MixEngine daemon (#38)`, 2026-09-06. Spec:
   [2026-09-06-mixengine-transport-design.md](../docs/superpowers/specs/2026-09-06-mixengine-transport-design.md).
+- Pha 2 — `e7e1189`, `feat(mixengine): sites, domains and TLS (#40)`, 2026-09-06. Spec:
+  [2026-09-06-mixengine-sites-domains-design.md](../docs/superpowers/specs/2026-09-06-mixengine-sites-domains-design.md).
+- Pha 3 — `a83c8ff`, `feat(mixengine): Projects, Runtimes & Packages, Services detail, Logs (#41)`,
+  2026-09-06. Spec:
+  [2026-09-06-mixengine-runtimes-services-logs-design.md](../docs/superpowers/specs/2026-09-06-mixengine-runtimes-services-logs-design.md).
+- Pha 4 (một phần) — `00eed71`, `feat(mixengine): add Blueprints and Extensions screens (Phase 4) (#42)`,
+  cùng các bản sửa theo sau cùng ngày/hôm sau (`0e30e78`, `bd4a597`, `09ec534`, `7911730`, `eef467a`),
+  2026-09-06 → 2026-09-07. Spec:
+  [2026-09-06-mixengine-blueprints-extensions-design.md](../docs/superpowers/specs/2026-09-06-mixengine-blueprints-extensions-design.md).
+  Spec này chỉ phủ Blueprints/Extensions (T4.3–T4.5); Metrics (T4.1–T4.2) và Settings (T4.6–T4.8)
+  chưa có spec, chưa có dòng code nào — xem mục "Còn nợ" ngay dưới bảng ánh xạ màn hình.
 
 Nguồn phía MixEngine dùng để viết roadmap này:
 
@@ -219,7 +231,7 @@ tắt được, và một thao tác cần quyền quản trị hiện ra đầy 
 
 ---
 
-## Pha 2 — Sites, Domains & TLS
+## Pha 2 — Sites, Domains & TLS · **ĐÃ XONG**
 
 - **T2.1 — Danh sách site.** `site.list` → `SiteSummary { domain, owner, kind, doc_root, https, state,
   sharing }`. `owner` là một project theo tên **hoặc một extension theo id**: site của extension chỉ
@@ -253,7 +265,7 @@ thông báo nói vì sao nó tắt.
 
 ---
 
-## Pha 3 — Runtimes, Services chi tiết, Logs
+## Pha 3 — Runtimes, Services chi tiết, Logs · **ĐÃ XONG**
 
 - **T3.1 — Runtimes.** `runtime.list_installed` → `RuntimeSummary { kind, version, channel, path,
   installed_at, bytes, default }`; `runtime.list_available`; `install` / `uninstall` là job có tiến
@@ -287,46 +299,58 @@ validate đúng ô, và tail được log của nó trong lúc nó khởi độn
 
 ---
 
-## Pha 4 — Metrics, Blueprints, Extensions, Settings
+## Pha 4 — Metrics, Blueprints, Extensions, Settings · **MỘT PHẦN**
 
-- **T4.1 — Metrics, hai nhịp lấy mẫu.** Mở `GET /metrics` **chính là** subscribe, đóng là hủy — nên
+Blueprints (T4.3) và Extensions (T4.4–T4.5) đã xong ở `00eed71` (#42). **Metrics (T4.1–T4.2) và
+Settings (T4.6–T4.8) còn nợ**: không có command Tauri nào cho namespace `metrics.*`, không có
+`autostart.status`/`daemon.uninstall_plan`/`daemon.uninstall`/`daemon.bundle`, và mục Settings trong
+Sidebar vẫn để `disabled` làm chỗ giữ (`screen: null` — [Sidebar.tsx](../src/modules/mixengine/components/Sidebar/Sidebar.tsx)).
+Metrics thậm chí chưa có trong Sidebar dưới dạng xám. Types đã vendor sẵn
+(`MetricsSample`, `MetricsHistory`, `MetricsFrame`, `DoctorReport`, `AutostartReport`,
+`UninstallQuery`, …) nên phần mượn kiểu không phải việc còn thiếu — chỉ thiếu backend command +
+màn hình.
+
+- **T4.1 — Metrics, hai nhịp lấy mẫu.** *(còn nợ)* Mở `GET /metrics` **chính là** subscribe, đóng là hủy — nên
   một client crash không để lại cái laptop bị đo mỗi giây. Không ai xem thì daemon vẫn lấy một mẫu
   mỗi phút, và lịch sử 24 giờ (`metrics.history`) làm từ đúng những mẫu đó. Không có
   `metrics.subscribe`.
-- **T4.2 — Một phút thiếu nghĩa là không ai đo, không bao giờ nghĩa là không dùng gì.** Vẽ một khoảng
+- **T4.2 — *(còn nợ)* Một phút thiếu nghĩa là không ai đo, không bao giờ nghĩa là không dùng gì.** Vẽ một khoảng
   trống; nối hai điểm qua nó là bịa ra một đêm số liệu chưa từng được lấy. Cùng luật ấy trong một
   mẫu: `cpu_percent` là `null` ở chỗ không lấy được số, và vẽ nó thành 0% là tuyên bố một service
   rảnh đúng vào giây nó đắt nhất. CPU/RSS gộp theo cả process group — php-fpm master và worker là một
   hàng — và là **ước lượng thừa**, không phải đại lượng mà giới hạn `memory_mb` bị đo theo.
-- **T4.3 — Blueprints, và hai nghĩa vụ client không được từ chối.** Mỗi chỗ nêu tên một blueprint
+- **T4.3 — *(đã xong, `00eed71` #42)* Blueprints, và hai nghĩa vụ client không được từ chối.** Mỗi chỗ nêu tên một blueprint
   phải nói có gì bảo chứng cho nó không — `blueprint.import` quyết định điều đó một lần và không gì
   khác nêu lại. Và trước một lần apply có bước `RunScaffold`, UI phải hiện **đúng câu lệnh đó** kèm
   trạng thái tin cậy, rồi gửi một `ScaffoldConsent` nêu cả hai; daemon từ chối consent lệch bất kỳ
   nửa nào. Output của job đọc ở `GET /logs/job/{id}`.
-- **T4.4 — Extensions.** `extension.registry_list` / `install` / `uninstall` / `configure`. Trước khi
+- **T4.4 — *(đã xong, `00eed71` #42)* Extensions.** `extension.available` (không phải
+  `extension.registry_list` như bản roadmap gốc ghi — tên đó không tồn tại, sửa lại theo
+  [commands.rs](../src-tauri/src/modules/mixengine/commands.rs)) / `install` / `uninstall` /
+  `configure`. Trước khi
   cài, `extension.plan` nói quyền, `homepage`, và với `kind = web-app` thì cả php-fpm pool nó chạy
   trên đó lẫn database nó quản. Nếu nó khai `signs_in`, tài khoản đó phải hiện **giữa** danh sách
   quyền chứ không phải bên cạnh tên miền, kèm đúng ba câu: tài khoản nào, mật khẩu lấy từ keyring lúc
   pool khởi động, và không gì ghi nó xuống đĩa.
-- **T4.5 — `desktop-app` là chính MixDB.** `ExtensionPlan.client` là `installed { program }` hoặc
+- **T4.5 — *(đã xong, `00eed71` #42)* `desktop-app` là chính MixDB.** `ExtensionPlan.client` là `installed { program }` hoặc
   `not_installed { searched }`. MixEngine **tìm** ứng dụng chứ không cài nó, nên version của entry
   không phải câu trả lời của máy này. Một màn hình MixDB tự nói về chính mình ở đây là chuyện dễ vẽ
   sai — giữ nó là một câu, không phải một luồng cài đặt.
-- **T4.6 — Settings.** Root directory, TLD quản lý, web server mặc định, updates, `daemon.doctor` và
+- **T4.6 — *(còn nợ)* Settings.** Root directory, TLD quản lý, web server mặc định, updates, `daemon.doctor` và
   `daemon.doctor_repair`. Autostart là một công tắc đọc từ `autostart.status`, và câu trả lời nói
   máy này có cơ chế nào, entry nằm đâu, và — thứ duy nhất client **không được** tự suy ra — một entry
   đã đăng ký thì thuộc home này hay home khác. Công tắc phải đọc được là *"bật, cho một home khác"*.
-- **T4.7 — Gỡ MixEngine.** `daemon.uninstall_plan` trước và luôn luôn, vì thứ người ta sắp cho phép
+- **T4.7 — *(còn nợ)* Gỡ MixEngine.** `daemon.uninstall_plan` trước và luôn luôn, vì thứ người ta sắp cho phép
   là thứ họ được xem. Rồi `daemon.uninstall`, một job bật đúng một prompt. Vẽ **mọi** hàng, kể cả
   những hàng trả lời *không có gì ở đó*: màn hình giấu chúng đi khiến người ta không phân biệt được
   "không có resolver wiring" với "resolver wiring không được xem tới". `keep_home` là lời mời giữ lại
   database. **Daemon tự kết thúc khi home đi cùng nó** — client phải chờ kết nối đóng rồi đọc lại các
   hàng `on_exit` từ đĩa, đó mới là *không còn gì sót lại* thay vì *daemon nói thế*.
-- **T4.8 — Diagnostics.** `daemon.bundle` gom một archive và trả đường dẫn của nó — "copy
+- **T4.8 — *(còn nợ)* Diagnostics.** `daemon.bundle` gom một archive và trả đường dẫn của nó — "copy
   diagnostics" là một file để mở, không phải năm chỗ để đọc. Thứ nó từ chối mang theo thì nó nêu tên,
   và UI hiện luôn cái đó thay vì trình bày archive như đã đầy đủ.
 
-**Xong khi:** trả lời được câu *"đêm qua cái gì ăn pin của tôi"* từ lịch sử 24 giờ, và gỡ được
+**Xong khi *(còn nợ)*:** trả lời được câu *"đêm qua cái gì ăn pin của tôi"* từ lịch sử 24 giờ, và gỡ được
 MixEngine khỏi máy mà xem trước được từng dòng.
 
 ---
