@@ -10,27 +10,22 @@ import { useTranslation } from "../../../../i18n";
 import * as api from "../../api";
 import type { SiteDetail } from "../../api/types/SiteDetail";
 import type { SiteKind } from "../../api/types/SiteKind";
+import { joinDocRoot, parseDomains, relativeToRoot } from "../../siteState";
 import styles from "./SiteForm.module.css";
 
 type Kind = SiteKind["kind"];
 
-/** Tên hiển thị mỗi domain gõ vào, tách bằng dấu phẩy hoặc xuống dòng — đầu danh sách là chính. */
-function parseDomains(raw: string): string[] {
-  return raw
-    .split(/[,\n]/)
-    .map((d) => d.trim())
-    .filter((d) => d !== "");
-}
-
 interface Props {
   /** `undefined` = tạo mới. Có giá trị = sửa, khoá project lại. */
   initial?: SiteDetail;
+  /** Chọn sẵn khi tạo mới — Sites truyền project đang lọc, nếu có. Bỏ qua khi `initial` có giá trị. */
+  defaultProject?: string;
   onCancel: () => void;
   /** Gọi sau khi lưu xong — cha tự `reload()`. */
   onSaved: () => void;
 }
 
-export default function SiteForm({ initial, onCancel, onSaved }: Props) {
+export default function SiteForm({ initial, defaultProject, onCancel, onSaved }: Props) {
   const { t } = useTranslation();
   const editing = initial !== undefined;
 
@@ -38,8 +33,14 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
   const [serviceIds, setServiceIds] = useState<string[]>([]);
 
   const [project, setProject] = useState(
-    editing && initial.site.owner.type === "project" ? initial.site.owner.name : "",
+    editing && initial.site.owner.type === "project"
+      ? initial.site.owner.name
+      : (defaultProject ?? ""),
   );
+  // Root của project sở hữu site — cho tạo mới, đọc lại mỗi khi đổi project (dưới); cho sửa,
+  // `SiteDetail.root` đã có sẵn, project bị khoá nên không đổi nữa. Chỉ để hiển thị: giá trị gửi
+  // lên daemon vẫn luôn là phần còn lại một mình (`docRoot`), đúng `SiteSummary.doc_root`.
+  const [projectRoot, setProjectRoot] = useState(editing ? initial.root : "");
   const [domainsText, setDomainsText] = useState(editing ? initial.domains.join(", ") : "");
   const [docRoot, setDocRoot] = useState(editing ? initial.site.doc_root : "");
   const [kind, setKind] = useState<Kind>(editing ? initial.site.kind.kind : "php-fpm");
@@ -69,6 +70,27 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
     });
   }, []);
 
+  // Chỉ cho tạo mới — sửa thì project bị khoá và `initial.root` đã là root đúng, không đổi nữa.
+  useEffect(() => {
+    if (editing) return;
+    if (project === "") {
+      setProjectRoot("");
+      return;
+    }
+    let live = true;
+    void api
+      .projectShow(project)
+      .then((detail) => {
+        if (live) setProjectRoot(detail.project.root);
+      })
+      .catch(() => {
+        if (live) setProjectRoot("");
+      });
+    return () => {
+      live = false;
+    };
+  }, [editing, project]);
+
   const domains = parseDomains(domainsText);
   const needsRiskyTldConsent = domains.some((d) => d.endsWith(".local"));
   const noProjects = !editing && projectNames !== null && projectNames.length === 0;
@@ -95,9 +117,23 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
     }
   }
 
+  /**
+   * Dialog luôn trả một đường dẫn tuyệt đối — cắt bỏ phần project root trước khi lưu vào state, vì
+   * đó là hình dạng thật `SiteSummary.doc_root` giữ ("Relative to the project's root, as stored").
+   * Không cắt thì ô này hiện tuyệt đối ngay sau khi chọn nhưng lại hiện phần còn lại sau khi lưu
+   * rồi mở lại — hai lần hiện khác nhau cho cùng một site.
+   *
+   * `defaultPath` mở sẵn đúng chỗ đang chọn (root, hoặc root/doc_root hiện tại) để bấm Browse là
+   * đi thẳng vào project, không phải mò lại từ đầu ổ đĩa.
+   */
   async function browseDocRoot() {
-    const picked = await openDialog({ directory: true, multiple: false });
-    if (typeof picked === "string") setDocRoot(picked);
+    const picked = await openDialog({
+      directory: true,
+      multiple: false,
+      defaultPath: projectRoot === "" ? undefined : joinDocRoot(projectRoot, docRoot),
+    });
+    if (typeof picked !== "string") return;
+    setDocRoot(projectRoot === "" ? picked : relativeToRoot(projectRoot, picked));
   }
 
   async function submit() {
@@ -201,6 +237,15 @@ export default function SiteForm({ initial, onCancel, onSaved }: Props) {
                   {t("common.browse")}
                 </Button>
               </div>
+              {/* Ô trên chỉ giữ phần còn lại sau root (đúng cái daemon lưu) — dòng này là chỗ
+                  duy nhất người dùng thấy root của project và đường dẫn đầy đủ thật sự là gì. */}
+              {projectRoot !== "" && (
+                <p className={styles.hint}>
+                  {t("mixengine.sites.form.docRootFull", {
+                    path: joinDocRoot(projectRoot, docRoot),
+                  })}
+                </p>
+              )}
             </label>
 
             <label className={styles.field}>

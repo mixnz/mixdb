@@ -18,6 +18,7 @@ import Runtimes from "./screens/Runtimes";
 import ServicesDetail from "./screens/ServicesDetail";
 import Settings from "./screens/Settings";
 import Sites from "./screens/Sites";
+import { requestSitesFilter } from "./sitesNavigation";
 import { parseMixEngineTabState, type MixEngineScreen } from "./tabState";
 import "./mixengine.css";
 
@@ -149,7 +150,15 @@ export default function MixEngineTab({ onTitleChange, onStateChange, restored }:
       <Sidebar screen={screen} onSelect={selectScreen} />
       <div className="mixengine-screen">
         {pane("dashboard", (active) => <Dashboard active={active} />)}
-        {pane("projects", (active) => <Projects active={active} />)}
+        {pane("projects", (active) => (
+          <Projects
+            active={active}
+            onOpenSites={(project) => {
+              requestSitesFilter(project);
+              selectScreen("sites");
+            }}
+          />
+        ))}
         {pane("sites", (active) => <Sites active={active} />)}
         {pane("domains", (active) => <Domains active={active} />)}
         {pane("runtimes", (active) => <Runtimes active={active} />)}

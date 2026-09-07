@@ -10,6 +10,7 @@ import type { SiteDetail } from "../../api/types/SiteDetail";
 import type { SiteSharing } from "../../api/types/SiteSharing";
 import { subscribeDaemonWatch } from "../../daemonWatch";
 import { applySharingChange, canEditSite, formatRemaining, type SiteRow } from "../../siteState";
+import { takePendingSitesFilter } from "../../sitesNavigation";
 import ShareDialog from "./ShareDialog";
 import SiteForm from "./SiteForm";
 import styles from "./Sites.module.css";
@@ -82,6 +83,15 @@ export default function Sites({ active }: { active: boolean }) {
     void api.projects().then((list) => setProjectNames(list.projects.map((p) => p.name)));
   }, []);
 
+  // Projects đặt một yêu cầu điều hướng ("mở Sites, lọc theo project X") qua `sitesNavigation.ts`
+  // rồi chuyển sang màn này — đọc đúng lúc `active` chuyển `true`, trước khi `reload()` chạy, để
+  // lần đọc đầu tiên khi quay lại màn đã lọc đúng thay vì lọc "tất cả" rồi phải sửa tay.
+  useEffect(() => {
+    if (!active) return;
+    const requested = takePendingSitesFilter();
+    if (requested !== null) setProjectFilter(requested);
+  }, [active]);
+
   // Đọc lại lúc mount và mỗi lần vừa quay lại màn này — cùng lý do `Dashboard.tsx`.
   useEffect(() => {
     if (active) void reload();
@@ -124,6 +134,7 @@ export default function Sites({ active }: { active: boolean }) {
         <Select
           value={projectFilter}
           onChange={setProjectFilter}
+          searchable
           options={[
             { value: "", label: t("mixengine.sites.filterAllProjects") },
             ...projectNames.map((name) => ({ value: name, label: name })),
@@ -187,6 +198,7 @@ export default function Sites({ active }: { active: boolean }) {
 
       {creating && (
         <SiteForm
+          defaultProject={projectFilter === "" ? undefined : projectFilter}
           onCancel={() => setCreating(false)}
           onSaved={() => {
             setCreating(false);
